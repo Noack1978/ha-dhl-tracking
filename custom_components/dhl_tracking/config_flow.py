@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import urllib.parse
 from typing import Any
 
 import aiohttp
@@ -25,10 +26,10 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MIN_SCAN_INTERVAL,
-    PARCEL_DE_URL,
     PARCEL_DE_SANDBOX_URL,
-    UNIFIED_API_URL,
+    PARCEL_DE_URL,
     UNIFIED_API_SANDBOX_URL,
+    UNIFIED_API_URL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,30 +42,43 @@ API_TYPE_OPTIONS = [
 
 async def _validate_api_key(api_key: str, api_type: str, sandbox: bool) -> str | None:
     """Gibt None zurück wenn der Key gültig ist, sonst einen Fehler-String."""
-    if api_type == API_TYPE_PARCEL_DE:
-        base = PARCEL_DE_SANDBOX_URL if sandbox else PARCEL_DE_URL
-        # Einfacher Ping ohne Tracking-Nummer
-        url = base
-        headers = {"DHL-API-Key": api_key}
-        # Ein leerer Request gibt 400/422, aber kein 401 – das reicht zur Validierung
-        expected_ok = (400, 404, 422, 200)
-    else:
-        base = UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL
-        url = f"{base}?trackingNumber=validationtest"
-        headers = {"DHL-API-Key": api_key, "Accept": "application/json"}
-        expected_ok = (200, 404)
-
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                url, headers=headers, timeout=aiohttp.ClientTimeout(total=API_TIMEOUT)
-            ) as resp:
-                if resp.status == 401:
-                    return "invalid_api_key"
-                if resp.status in expected_ok:
+
+            if api_type == API_TYPE_PARCEL_DE:
+                # Parcel DE braucht zwingend einen XML-Parameter – sonst liefert DHL
+                # immer 401 auch bei gültigem Key.
+                base = PARCEL_DE_SANDBOX_URL if sandbox else PARCEL_DE_URL
+                xml_body = (
+                    '<data request="get-status-for-public-user">'
+                    '<Id value="0000000000" schemaVersion="1.0"/>'
+                    '</data>'
+                )
+                url = f"{base}?xml={urllib.parse.quote(xml_body)}"
+                headers = {"DHL-API-Key": api_key}
+                # Alles außer 401 = Key wird akzeptiert
+                # (404 = Key ok, Sendung nicht gefunden → erwünscht)
+                async with session.get(
+                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=API_TIMEOUT)
+                ) as resp:
+                    _LOGGER.debug("Parcel DE Validierung: HTTP %s", resp.status)
+                    if resp.status == 401:
+                        return "invalid_api_key"
+                    return None  # 200, 404, 400, 422, 500 → Key ist gültig
+
+            else:
+                # Unified API – einfacher JSON-Request
+                base = UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL
+                url = f"{base}?trackingNumber=validationtest"
+                headers = {"DHL-API-Key": api_key, "Accept": "application/json"}
+                async with session.get(
+                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=API_TIMEOUT)
+                ) as resp:
+                    _LOGGER.debug("Unified API Validierung: HTTP %s", resp.status)
+                    if resp.status == 401:
+                        return "invalid_api_key"
                     return None
-                _LOGGER.warning("DHL API Validierung: HTTP %s", resp.status)
-                return None  # Im Zweifel akzeptieren und beim ersten echten Call prüfen
+
     except aiohttp.ClientError:
         return "cannot_connect"
     except Exception:  # noqa: BLE001
@@ -154,7 +168,6 @@ class DhlTrackingOptionsFlow(OptionsFlow):
         if user_input is not None:
             number = user_input["tracking_number"].strip().replace(" ", "").upper()
             label  = user_input.get("label", "").strip()
-
             if len(number) < 5:
                 errors["tracking_number"] = "invalid_tracking_number"
             elif number in self._tracking_numbers:
