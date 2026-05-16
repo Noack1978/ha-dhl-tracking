@@ -1,0 +1,70 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "DHL API konfigurieren",
+        "description": "Gib deinen API-Schlüssel vom DHL Developer Portal ein (developer.dhl.com → Shipment Tracking – Unified).",
+        "data": {
+          "api_key": "API-Schlüssel",
+          "sandbox": "Sandbox-Modus (nur zum Testen)"
+        },
+        "data_description": {
+          "api_key": "Zu finden unter developer.dhl.com → Deine App → Berechtigung",
+          "sandbox": "Aktivieren, um Test-Sendungsnummern zu verwenden ohne echte API-Calls zu verbrauchen"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Ungültiger API-Schlüssel – bitte auf developer.dhl.com prüfen",
+      "cannot_connect": "Verbindung zur DHL API fehlgeschlagen – Internetverbindung prüfen",
+      "unknown": "Unbekannter Fehler – siehe Log für Details"
+    },
+    "abort": {
+      "already_configured": "DHL Sendungsverfolgung ist bereits konfiguriert"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "DHL Sendungsverfolgung",
+        "menu_options": {
+          "add_tracking": "Sendung hinzufügen",
+          "manage_trackings": "Sendungen verwalten / entfernen",
+          "settings": "Einstellungen"
+        }
+      },
+      "add_tracking": {
+        "title": "Sendung hinzufügen",
+        "description": "Gib eine DHL-Sendungsnummer ein. Der Sensor wird nach dem Speichern automatisch erstellt.",
+        "data": {
+          "tracking_number": "Sendungsnummer",
+          "label": "Bezeichnung (optional)"
+        },
+        "data_description": {
+          "tracking_number": "Die vollständige DHL-Sendungsnummer ohne Leerzeichen",
+          "label": "Lesbare Bezeichnung, z. B. 'Amazon Mai' (wird als Sensor-Name verwendet)"
+        }
+      },
+      "manage_trackings": {
+        "title": "Sendungen verwalten",
+        "description": "Sendungen auswählen, die entfernt werden sollen. Sensor-Entitäten werden dabei gelöscht.",
+        "data": {
+          "remove": "Zu entfernende Sendungen"
+        }
+      },
+      "settings": {
+        "title": "Einstellungen",
+        "description": "Das Aktualisierungsintervall bestimmt, wie oft die DHL API abgefragt wird. Bei 250 Calls/Tag und 1 Sendung: mind. alle 345 Sekunden. Standard 1800 s (30 Min) ist für bis zu 5 Sendungen optimal.",
+        "data": {
+          "update_interval": "Aktualisierungsintervall (Sekunden)"
+        }
+      }
+    },
+    "error": {
+      "interval_too_low": "Mindestintervall ist 600 Sekunden (10 Minuten)",
+      "invalid_tracking_number": "Sendungsnummer ist zu kurz oder ungültig",
+      "tracking_already_added": "Diese Sendungsnummer wird bereits verfolgt",
+      "no_trackings": "Keine Sendungen gespeichert – zuerst eine Sendung hinzufügen"
+    }
+  }
+}

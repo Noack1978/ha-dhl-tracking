@@ -1,0 +1,70 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure DHL API",
+        "description": "Enter your API key from the DHL Developer Portal (developer.dhl.com → Shipment Tracking – Unified).",
+        "data": {
+          "api_key": "API Key",
+          "sandbox": "Sandbox mode (for testing only)"
+        },
+        "data_description": {
+          "api_key": "Found at developer.dhl.com → Your App → Authorization",
+          "sandbox": "Enable to use test tracking numbers without consuming real API calls"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Invalid API key – please check on developer.dhl.com",
+      "cannot_connect": "Failed to connect to DHL API – check your internet connection",
+      "unknown": "Unknown error – check the logs for details"
+    },
+    "abort": {
+      "already_configured": "DHL Shipment Tracking is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "DHL Shipment Tracking",
+        "menu_options": {
+          "add_tracking": "Add shipment",
+          "manage_trackings": "Manage / remove shipments",
+          "settings": "Settings"
+        }
+      },
+      "add_tracking": {
+        "title": "Add shipment",
+        "description": "Enter a DHL tracking number. The sensor will be created automatically after saving.",
+        "data": {
+          "tracking_number": "Tracking number",
+          "label": "Label (optional)"
+        },
+        "data_description": {
+          "tracking_number": "Full DHL tracking number without spaces",
+          "label": "Human-readable label, e.g. 'Amazon May' (used as sensor name)"
+        }
+      },
+      "manage_trackings": {
+        "title": "Manage shipments",
+        "description": "Select shipments to remove. The sensor entities will be deleted.",
+        "data": {
+          "remove": "Shipments to remove"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "The update interval controls how often the DHL API is queried. With 250 calls/day and 1 shipment: at least every 345 seconds. Default 1800 s (30 min) is optimal for up to 5 shipments.",
+        "data": {
+          "update_interval": "Update interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "interval_too_low": "Minimum interval is 600 seconds (10 minutes)",
+      "invalid_tracking_number": "Tracking number is too short or invalid",
+      "tracking_already_added": "This tracking number is already being tracked",
+      "no_trackings": "No shipments saved – add a shipment first"
+    }
+  }
+}
