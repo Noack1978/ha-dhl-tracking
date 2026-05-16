@@ -10,14 +10,15 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 ## Features
 
-- ✅ Offizielle **DHL Shipment Tracking – Unified API** (kostenlos, 250 Calls/Tag)
+- ✅ **Parcel DE Tracking** (Post & Parcel Germany) – empfohlen für Privatpersonen in Deutschland
+- ✅ **Shipment Tracking – Unified** als Alternative (erfordert separate Freischaltung durch DHL)
 - 📦 **Mehrere Sendungen** gleichzeitig verfolgen
 - 🏷️ Individuelle **Bezeichnungen** pro Sendung (z. B. „Amazon Mai")
 - 🔄 **Automatische Aktualisierung** (konfigurierbares Intervall)
 - 🛠️ **Services** zum Hinzufügen/Entfernen von Sendungen (auch per Automation)
 - 🌍 UI auf **Deutsch und Englisch**
 - 🔒 API-Key wird sicher in HA gespeichert
-- 🧪 **Sandbox-Modus** zum Testen
+- 🧪 **Sandbox-Modus** für die Test-Umgebung (Customer Integration Testing)
 
 ---
 
@@ -27,11 +28,21 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 1. Registriere dich kostenlos auf [developer.dhl.com](https://developer.dhl.com)
 2. Erstelle eine neue App
-3. Füge die API **„Shipment Tracking – Unified"** hinzu
-4. Warte auf Freischaltung (meist 1–2 Werktage)
-5. Kopiere deinen **API-Schlüssel** aus dem Dashboard
+3. Füge die API **„Parcel DE Tracking (Post & Parcel Germany)"** hinzu
+4. Den **API-Schlüssel (Consumer Key)** aus dem Dashboard kopieren
 
-> **Limit:** 250 API-Calls pro Tag (kostenlos). Bei Standardintervall von 30 Minuten und 5 Sendungen werden ~240 Calls/Tag benötigt – optimal ausgenutzt.
+> **Hinweis:** Die API ist für Privatpersonen in Deutschland direkt verfügbar und wird sofort freigeschaltet (kein manueller Genehmigungsprozess notwendig).
+
+> **Limit:** 1000 API-Calls pro Tag im Testing-Modus. Bei Standardintervall von 30 Minuten und 5 Sendungen werden ~240 Calls/Tag benötigt.
+
+### Welche API soll ich nehmen?
+
+| API | Zielgruppe | Freischaltung | Calls/Tag |
+|---|---|---|---|
+| **Parcel DE Tracking** ✅ | Privatpersonen (DE) | Sofort | 1000 |
+| Shipment Tracking – Unified | Alle DHL-Sparten | Manuell durch DHL | 250 |
+
+→ **Empfehlung: Parcel DE Tracking** – sofort verfügbar, ausreichend für den Heimgebrauch.
 
 ---
 
@@ -57,8 +68,10 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 1. **Einstellungen → Geräte & Dienste → Integration hinzufügen**
 2. „DHL Sendungsverfolgung" suchen
-3. API-Schlüssel eingeben → Weiter
-4. Integration ist eingerichtet – noch keine Sendungen vorhanden
+3. API-Schlüssel eingeben
+4. API-Typ wählen: **Parcel DE Tracking (Post & Parcel Germany)** – empfohlen
+5. Sandbox aktivieren, wenn dein API-Status noch „Customer Integration Testing" ist
+6. Speichern – die Integration ist eingerichtet
 
 ### Sendungen hinzufügen
 
@@ -71,22 +84,6 @@ service: dhl_tracking.add_tracking
 data:
   tracking_number: "1234567890"
   label: "Amazon Bestellung"
-```
-
-**Option C – Automation bei E-Mail-Eingang** *(mit Gmail-Integration):*
-```yaml
-automation:
-  - alias: "DHL Sendung aus E-Mail hinzufügen"
-    trigger:
-      - platform: state
-        entity_id: sensor.gmail_neue_email
-    condition:
-      - condition: template
-        value_template: "{{ 'DHL' in state_attr('sensor.gmail_neue_email', 'subject') }}"
-    action:
-      - service: dhl_tracking.add_tracking
-        data:
-          tracking_number: "{{ state_attr('sensor.gmail_neue_email', 'tracking_number') }}"
 ```
 
 ---
@@ -102,12 +99,8 @@ Pro Sendungsnummer wird **ein Sensor** erstellt:
 | `label` | Bezeichnung |
 | `status_code` | API-Statuscode (z. B. `out-for-delivery`) |
 | `current_location` | Aktueller Ort |
-| `current_country` | Aktuelles Land |
 | `last_event_time` | Zeitstempel letztes Ereignis |
 | `estimated_delivery` | Geschätztes Lieferdatum |
-| `service` | DHL-Dienstleistung (z. B. Paket National) |
-| `origin` | Absenderort |
-| `destination` | Empfängerort |
 | `events` | Liste der letzten 10 Ereignisse |
 | `event_count` | Gesamtanzahl Ereignisse |
 
@@ -179,7 +172,7 @@ sections:
 
 ---
 
-## Automations-Beispiel
+## Automations-Beispiele
 
 **Benachrichtigung bei Zustellung:**
 ```yaml
@@ -216,10 +209,10 @@ automation:
 
 ## Hinweise & Limits
 
-- **250 Calls/Tag** sind kostenlos. Bei Standard-Intervall (30 Min):
+- **1000 Calls/Tag** im Parcel DE Testing-Modus. Bei Standard-Intervall (30 Min):
   - 1 Sendung → ~48 Calls/Tag
   - 5 Sendungen → ~240 Calls/Tag
-- Intervall über Einstellungen → Konfigurieren → Einstellungen anpassbar (Minimum: 600 s)
+- Sandbox-Modus aktivieren, solange der API-Status „Customer Integration Testing" ist
 - API-Key wird **lokal in HA** gespeichert, nie übertragen
 
 ---
