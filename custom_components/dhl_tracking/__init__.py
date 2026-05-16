@@ -12,8 +12,10 @@ from homeassistant.helpers import config_validation as cv
 from .const import (
     API_TYPE_PARCEL_DE,
     CONF_API_KEY,
+    CONF_API_SECRET,
     CONF_API_TYPE,
     CONF_LABELS,
+    CONF_POSTAL_CODES,
     CONF_SANDBOX,
     CONF_TRACKING_NUMBERS,
     CONF_UPDATE_INTERVAL,
@@ -27,23 +29,20 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Integration aus einem Config-Entry einrichten."""
     hass.data.setdefault(DOMAIN, {})
-
-    tracking_numbers: list[str] = entry.options.get(CONF_TRACKING_NUMBERS, [])
-    scan_interval: int = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL)
-    api_type: str = entry.data.get(CONF_API_TYPE, API_TYPE_PARCEL_DE)
 
     coordinator = DhlTrackingCoordinator(
         hass=hass,
         api_key=entry.data[CONF_API_KEY],
-        api_type=api_type,
-        tracking_numbers=tracking_numbers,
-        scan_interval=scan_interval,
+        api_secret=entry.data.get(CONF_API_SECRET, ""),
+        api_type=entry.data.get(CONF_API_TYPE, API_TYPE_PARCEL_DE),
+        tracking_numbers=entry.options.get(CONF_TRACKING_NUMBERS, []),
+        postal_codes=entry.options.get(CONF_POSTAL_CODES, {}),
+        scan_interval=entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL),
         sandbox=entry.data.get(CONF_SANDBOX, False),
     )
 
-    if tracking_numbers:
+    if entry.options.get(CONF_TRACKING_NUMBERS):
         await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
@@ -74,68 +73,62 @@ def _async_register_services(hass: HomeAssistant) -> None:
         entries = hass.config_entries.async_entries(DOMAIN)
         if not entries:
             return None
-        if entry_id:
-            return next((e for e in entries if e.entry_id == entry_id), None)
-        return entries[0]
+        return next((e for e in entries if e.entry_id == entry_id), entries[0])
 
     async def handle_add_tracking(call: ServiceCall) -> None:
         entry = _get_entry(call.data.get("entry_id"))
         if not entry:
-            _LOGGER.error("dhl_tracking.add_tracking: Kein Config-Entry gefunden.")
             return
         number = call.data["tracking_number"].strip().replace(" ", "").upper()
         label  = call.data.get("label", "").strip()
+        plz    = call.data.get("postal_code", "").strip()
         numbers = list(entry.options.get(CONF_TRACKING_NUMBERS, []))
         labels  = dict(entry.options.get(CONF_LABELS, {}))
+        postal  = dict(entry.options.get(CONF_POSTAL_CODES, {}))
         if number in numbers:
-            _LOGGER.info("Sendungsnummer %s wird bereits verfolgt.", number)
             return
         numbers.append(number)
-        if label:
-            labels[number] = label
+        if label: labels[number] = label
+        if plz:   postal[number] = plz
         hass.config_entries.async_update_entry(
-            entry, options={**entry.options, CONF_TRACKING_NUMBERS: numbers, CONF_LABELS: labels}
+            entry, options={**entry.options, CONF_TRACKING_NUMBERS: numbers,
+                            CONF_LABELS: labels, CONF_POSTAL_CODES: postal}
         )
         await hass.config_entries.async_reload(entry.entry_id)
 
     async def handle_remove_tracking(call: ServiceCall) -> None:
         entry = _get_entry(call.data.get("entry_id"))
         if not entry:
-            _LOGGER.error("dhl_tracking.remove_tracking: Kein Config-Entry gefunden.")
             return
         number  = call.data["tracking_number"].strip().replace(" ", "").upper()
         numbers = [n for n in entry.options.get(CONF_TRACKING_NUMBERS, []) if n != number]
         labels  = {k: v for k, v in entry.options.get(CONF_LABELS, {}).items() if k != number}
+        postal  = {k: v for k, v in entry.options.get(CONF_POSTAL_CODES, {}).items() if k != number}
         hass.config_entries.async_update_entry(
-            entry, options={**entry.options, CONF_TRACKING_NUMBERS: numbers, CONF_LABELS: labels}
+            entry, options={**entry.options, CONF_TRACKING_NUMBERS: numbers,
+                            CONF_LABELS: labels, CONF_POSTAL_CODES: postal}
         )
         await hass.config_entries.async_reload(entry.entry_id)
 
     async def handle_refresh(call: ServiceCall) -> None:
         entry = _get_entry(call.data.get("entry_id"))
         if not entry:
-            _LOGGER.error("dhl_tracking.refresh: Kein Config-Entry gefunden.")
             return
-        coordinator: DhlTrackingCoordinator | None = hass.data[DOMAIN].get(entry.entry_id)
+        coordinator = hass.data[DOMAIN].get(entry.entry_id)
         if coordinator:
             await coordinator.async_refresh()
 
-    hass.services.async_register(
-        DOMAIN, "add_tracking", handle_add_tracking,
+    hass.services.async_register(DOMAIN, "add_tracking", handle_add_tracking,
         schema=vol.Schema({
             vol.Required("tracking_number"): cv.string,
             vol.Optional("label", default=""): cv.string,
+            vol.Optional("postal_code", default=""): cv.string,
             vol.Optional("entry_id"): cv.string,
-        }),
-    )
-    hass.services.async_register(
-        DOMAIN, "remove_tracking", handle_remove_tracking,
+        }))
+    hass.services.async_register(DOMAIN, "remove_tracking", handle_remove_tracking,
         schema=vol.Schema({
             vol.Required("tracking_number"): cv.string,
             vol.Optional("entry_id"): cv.string,
-        }),
-    )
-    hass.services.async_register(
-        DOMAIN, "refresh", handle_refresh,
-        schema=vol.Schema({vol.Optional("entry_id"): cv.string}),
-    )
+        }))
+    hass.services.async_register(DOMAIN, "refresh", handle_refresh,
+        schema=vol.Schema({vol.Optional("entry_id"): cv.string}))
