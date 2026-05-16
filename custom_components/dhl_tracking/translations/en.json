@@ -3,21 +3,23 @@
     "step": {
       "user": {
         "title": "Configure DHL API",
-        "description": "Enter your API key from the DHL Developer Portal (developer.dhl.com).",
+        "description": "Enter your API key and secret from the DHL Developer Portal (developer.dhl.com → Your App → Authorization).",
         "data": {
-          "api_key": "API Key",
+          "api_key": "API Key (Consumer Key)",
+          "api_secret": "API Secret (Consumer Secret)",
           "api_type": "API Type",
-          "sandbox": "Sandbox mode (for testing only)"
+          "sandbox": "Sandbox mode (Customer Integration Testing)"
         },
         "data_description": {
-          "api_key": "Found at developer.dhl.com → Your App → Authorization → Consumer Key",
+          "api_key": "Found at: Your App → Authorization → Consumer Key",
+          "api_secret": "Found at: Your App → Authorization → Consumer Secret",
           "api_type": "Parcel DE Tracking recommended for private persons in Germany",
-          "sandbox": "Enable for Customer Integration Testing environment"
+          "sandbox": "Enable while API status is 'Customer Integration Testing'"
         }
       }
     },
     "error": {
-      "invalid_api_key": "Invalid API key – please check on developer.dhl.com",
+      "invalid_api_key": "Invalid credentials – check API key and secret on developer.dhl.com",
       "cannot_connect": "Failed to connect to DHL API – check your internet connection",
       "unknown": "Unknown error – check the logs for details"
     },
@@ -37,14 +39,16 @@
       },
       "add_tracking": {
         "title": "Add shipment",
-        "description": "Enter a DHL tracking number. The sensor will be created automatically after saving.",
+        "description": "Enter a tracking number. The sensor will be created automatically after saving.",
         "data": {
           "tracking_number": "Tracking number",
-          "label": "Label (optional)"
+          "label": "Label (optional)",
+          "postal_code": "Recipient postal code (optional)"
         },
         "data_description": {
           "tracking_number": "Full DHL tracking number without spaces",
-          "label": "Human-readable label e.g. 'Amazon May' (used as sensor name)"
+          "label": "Human-readable label e.g. 'Amazon May' (used as sensor name)",
+          "postal_code": "Recipient ZIP code for extended location data (recommended)"
         }
       },
       "manage_trackings": {

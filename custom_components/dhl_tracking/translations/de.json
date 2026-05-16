@@ -3,21 +3,23 @@
     "step": {
       "user": {
         "title": "DHL API konfigurieren",
-        "description": "API-Schlüssel vom DHL Developer Portal eingeben (developer.dhl.com).",
+        "description": "API-Schlüssel und API-Secret vom DHL Developer Portal eingeben (developer.dhl.com → Deine App → Berechtigung).",
         "data": {
-          "api_key": "API-Schlüssel",
+          "api_key": "API-Schlüssel (Consumer Key)",
+          "api_secret": "API-Secret (Consumer Secret)",
           "api_type": "API-Typ",
-          "sandbox": "Sandbox-Modus (nur zum Testen)"
+          "sandbox": "Sandbox-Modus (Customer Integration Testing)"
         },
         "data_description": {
-          "api_key": "Zu finden unter developer.dhl.com → Deine App → Berechtigung → Consumer Key",
+          "api_key": "Zu finden unter: Deine App → Berechtigung → Consumer Key",
+          "api_secret": "Zu finden unter: Deine App → Berechtigung → Consumer Secret",
           "api_type": "Parcel DE Tracking empfohlen für Privatpersonen in Deutschland",
-          "sandbox": "Aktivieren für den Testing-Modus (Customer Integration Testing)"
+          "sandbox": "Aktivieren solange der API-Status 'Customer Integration Testing' ist"
         }
       }
     },
     "error": {
-      "invalid_api_key": "Ungültiger API-Schlüssel – bitte auf developer.dhl.com prüfen",
+      "invalid_api_key": "Ungültige Zugangsdaten – API-Schlüssel und Secret auf developer.dhl.com prüfen",
       "cannot_connect": "Verbindung zur DHL API fehlgeschlagen – Internetverbindung prüfen",
       "unknown": "Unbekannter Fehler – siehe Log für Details"
     },
@@ -37,14 +39,16 @@
       },
       "add_tracking": {
         "title": "Sendung hinzufügen",
-        "description": "DHL-Sendungsnummer eingeben. Der Sensor wird nach dem Speichern automatisch erstellt.",
+        "description": "Sendungsnummer eingeben. Der Sensor wird nach dem Speichern automatisch erstellt.",
         "data": {
           "tracking_number": "Sendungsnummer",
-          "label": "Bezeichnung (optional)"
+          "label": "Bezeichnung (optional)",
+          "postal_code": "Postleitzahl Empfänger (optional)"
         },
         "data_description": {
           "tracking_number": "Vollständige DHL-Sendungsnummer ohne Leerzeichen",
-          "label": "Lesbare Bezeichnung z. B. 'Amazon Mai' (wird als Sensor-Name verwendet)"
+          "label": "Lesbare Bezeichnung z. B. 'Amazon Mai' (wird als Sensor-Name verwendet)",
+          "postal_code": "Empfänger-PLZ für erweiterte Standortdaten (empfohlen)"
         }
       },
       "manage_trackings": {
@@ -56,7 +60,7 @@
       },
       "settings": {
         "title": "Einstellungen",
-        "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min). Standard 1800 s (30 Min).",
+        "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min). Standard: 1800 s (30 Min).",
         "data": {
           "update_interval": "Aktualisierungsintervall (Sekunden)"
         }
