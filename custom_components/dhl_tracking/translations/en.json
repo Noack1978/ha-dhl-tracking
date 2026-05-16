@@ -3,14 +3,16 @@
     "step": {
       "user": {
         "title": "Configure DHL API",
-        "description": "Enter your API key from the DHL Developer Portal (developer.dhl.com → Shipment Tracking – Unified).",
+        "description": "Enter your API key from the DHL Developer Portal (developer.dhl.com).",
         "data": {
           "api_key": "API Key",
+          "api_type": "API Type",
           "sandbox": "Sandbox mode (for testing only)"
         },
         "data_description": {
-          "api_key": "Found at developer.dhl.com → Your App → Authorization",
-          "sandbox": "Enable to use test tracking numbers without consuming real API calls"
+          "api_key": "Found at developer.dhl.com → Your App → Authorization → Consumer Key",
+          "api_type": "Parcel DE Tracking recommended for private persons in Germany",
+          "sandbox": "Enable for Customer Integration Testing environment"
         }
       }
     },
@@ -42,19 +44,19 @@
         },
         "data_description": {
           "tracking_number": "Full DHL tracking number without spaces",
-          "label": "Human-readable label, e.g. 'Amazon May' (used as sensor name)"
+          "label": "Human-readable label e.g. 'Amazon May' (used as sensor name)"
         }
       },
       "manage_trackings": {
         "title": "Manage shipments",
-        "description": "Select shipments to remove. The sensor entities will be deleted.",
+        "description": "Select shipments to remove.",
         "data": {
           "remove": "Shipments to remove"
         }
       },
       "settings": {
         "title": "Settings",
-        "description": "The update interval controls how often the DHL API is queried. With 250 calls/day and 1 shipment: at least every 345 seconds. Default 1800 s (30 min) is optimal for up to 5 shipments.",
+        "description": "Update interval in seconds. Minimum: 600 s (10 min). Default: 1800 s (30 min).",
         "data": {
           "update_interval": "Update interval (seconds)"
         }
