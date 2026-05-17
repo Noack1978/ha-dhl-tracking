@@ -20,6 +20,8 @@ from .const import (
     PARCEL_DE_AUTH_URL,
     PARCEL_DE_SANDBOX_URL,
     PARCEL_DE_URL,
+    SANDBOX_GKP_PASSWORD,
+    SANDBOX_GKP_USER,
     UNIFIED_API_SANDBOX_URL,
     UNIFIED_API_URL,
 )
@@ -36,24 +38,34 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         api_key: str,
         api_secret: str,
         api_type: str,
+        gkp_user: str,
+        gkp_password: str,
         tracking_numbers: list[str],
         postal_codes: dict[str, str],
         scan_interval: int,
         sandbox: bool = False,
     ) -> None:
-        self.api_key    = api_key
-        self.api_secret = api_secret
-        self.api_type   = api_type
+        self.api_key      = api_key
+        self.api_secret   = api_secret
+        self.api_type     = api_type
+        self.sandbox      = sandbox
         self.tracking_numbers = tracking_numbers
         self.postal_codes     = postal_codes
-        self.sandbox = sandbox
+
+        # Im Sandbox-Modus offizielle DHL-Testdaten verwenden wenn keine eigenen vorhanden
+        if api_type == API_TYPE_PARCEL_DE and sandbox:
+            self._gkp_user     = gkp_user or SANDBOX_GKP_USER
+            self._gkp_password = gkp_password or SANDBOX_GKP_PASSWORD
+        else:
+            self._gkp_user     = gkp_user
+            self._gkp_password = gkp_password
 
         # OAuth2-Token-Cache
         self._bearer_token: str | None = None
         self._token_expires: datetime  = datetime.min
 
         if api_type == API_TYPE_PARCEL_DE:
-            self._auth_url    = PARCEL_DE_AUTH_SANDBOX_URL if sandbox else PARCEL_DE_AUTH_URL
+            self._auth_url     = PARCEL_DE_AUTH_SANDBOX_URL if sandbox else PARCEL_DE_AUTH_URL
             self._tracking_url = PARCEL_DE_SANDBOX_URL if sandbox else PARCEL_DE_URL
         else:
             self._tracking_url = UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL
@@ -72,10 +84,12 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data: dict[str, Any] = {}
         async with aiohttp.ClientSession() as session:
             if self.api_type == API_TYPE_PARCEL_DE:
-                # Bearer Token holen/erneuern (gültig 5 Stunden)
                 token = await self._get_bearer_token(session)
                 if not token:
-                    raise UpdateFailed("Kein Bearer Token – API-Schlüssel oder Secret prüfen.")
+                    raise UpdateFailed(
+                        "Kein Bearer Token erhalten. "
+                        "API-Schlüssel, Secret und GKP-Zugangsdaten prüfen."
+                    )
             else:
                 token = None
 
@@ -93,20 +107,32 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     data[number] = {"_error": str(err)}
         return data
 
-    # ── OAuth2 Token (Parcel DE) ─────────────────────────────────────────────
+    # ── OAuth2 Token – ROPC Password Flow ────────────────────────────────────
 
     async def _get_bearer_token(self, session: aiohttp.ClientSession) -> str | None:
-        """Holt einen Bearer Token per OAuth2 client_credentials flow."""
-        if self._bearer_token and datetime.now() < self._token_expires:
-            return self._bearer_token  # Cache verwenden
+        """OAuth2 Resource Owner Password Credentials Flow.
 
-        _LOGGER.debug("DHL OAuth2: Neuen Bearer Token anfordern von %s", self._auth_url)
+        Benötigt:
+          - client_id / client_secret  (API-Key & Secret vom Developer Portal)
+          - username / password        (GKP-Zugangsdaten von DHL; im Sandbox-Modus
+                                        werden automatisch die offiziellen Testdaten genutzt)
+        """
+        if self._bearer_token and datetime.now() < self._token_expires:
+            return self._bearer_token
+
+        _LOGGER.debug(
+            "DHL OAuth2: Token anfordern für GKP-User '%s' von %s",
+            self._gkp_user, self._auth_url,
+        )
 
         payload = {
-            "grant_type":    "client_credentials",
+            "grant_type":    "password",
+            "username":      self._gkp_user,
+            "password":      self._gkp_password,
             "client_id":     self.api_key,
             "client_secret": self.api_secret,
         }
+
         try:
             async with session.post(
                 self._auth_url,
@@ -114,20 +140,27 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
             ) as resp:
-                _LOGGER.debug("OAuth2 Antwort: HTTP %s", resp.status)
+                body = await resp.text()
+                _LOGGER.debug("OAuth2 Antwort: HTTP %s | %s", resp.status, body[:200])
+
+                if resp.status == 400:
+                    _LOGGER.error(
+                        "OAuth2 HTTP 400 – Anfrage-Format ungültig oder "
+                        "GKP-Zugangsdaten fehlen. Antwort: %s", body[:300]
+                    )
+                    return None
                 if resp.status == 401:
-                    _LOGGER.error("OAuth2 fehlgeschlagen: Ungültiger API-Key oder Secret.")
+                    _LOGGER.error("OAuth2 HTTP 401 – Ungültige Zugangsdaten.")
                     return None
                 if resp.status != 200:
-                    _LOGGER.error("OAuth2 HTTP %s", resp.status)
+                    _LOGGER.error("OAuth2 HTTP %s | %s", resp.status, body[:200])
                     return None
 
                 result = await resp.json(content_type=None)
-                token = result.get("access_token")
+                token      = result.get("access_token")
                 expires_in = int(result.get("expires_in", 17999))
 
                 self._bearer_token = token
-                # 5 Minuten Puffer vor Ablauf
                 self._token_expires = datetime.now() + timedelta(seconds=expires_in - 300)
                 _LOGGER.debug("OAuth2: Token erhalten, gültig %s Sekunden.", expires_in)
                 return token
@@ -135,7 +168,7 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"OAuth2 Verbindungsfehler: {err}") from err
 
-    # ── Parcel DE Tracking (XML + Bearer Token) ──────────────────────────────
+    # ── Parcel DE Tracking (XML + Bearer Token) ───────────────────────────────
 
     async def _fetch_parcel_de(
         self,
@@ -144,8 +177,6 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         tracking_number: str,
         postal_code: str = "",
     ) -> dict[str, Any]:
-        """Parcel DE Tracking – XML-Request mit Bearer-Auth."""
-
         xml_parts = [
             '<data request="get-status-for-public-user">',
             f'<Id value="{tracking_number}" schemaVersion="1.0"/>',
@@ -158,10 +189,9 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         url = f"{self._tracking_url}?xml={urllib.parse.quote(xml_body)}"
         headers = {
             "Authorization": f"Bearer {token}",
-            "Accept": "application/xml,text/xml,*/*",
+            "Accept":        "application/xml,text/xml,*/*",
         }
-
-        _LOGGER.debug("Parcel DE Tracking: %s", url)
+        _LOGGER.debug("Parcel DE Tracking: %s", url[:120])
 
         try:
             async with session.get(
@@ -170,28 +200,24 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ) as resp:
                 _LOGGER.debug("Parcel DE Antwort: HTTP %s", resp.status)
                 if resp.status == 401:
-                    # Token abgelaufen – Cache leeren und beim nächsten Update neu holen
-                    self._bearer_token = None
+                    self._bearer_token = None  # Token erneuern beim nächsten Abruf
                     return {"_error": "token_expired"}
                 if resp.status == 404:
                     return {"status": {"status": "not-found", "description": "Sendung nicht gefunden"}, "events": []}
                 if resp.status != 200:
                     return {"_error": f"http_{resp.status}"}
-
                 content = await resp.text()
-                _LOGGER.debug("Parcel DE XML (erste 500 Z.): %s", content[:500])
-
+                _LOGGER.debug("Parcel DE XML (500 Z.): %s", content[:500])
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Verbindungsfehler: {err}") from err
 
         return self._parse_parcel_de_xml(content, tracking_number)
 
     def _parse_parcel_de_xml(self, xml_content: str, tracking_number: str) -> dict[str, Any]:
-        """Parst XML-Antwort in das interne Datenformat."""
         try:
             root = ET.fromstring(xml_content)
         except ET.ParseError as err:
-            _LOGGER.error("XML-Parsing fehlgeschlagen: %s | Inhalt: %s", err, xml_content[:300])
+            _LOGGER.error("XML-Parsing fehlgeschlagen: %s | %s", err, xml_content[:300])
             return {"_error": "parse_error"}
 
         def find_all(node: ET.Element, tag: str) -> list[ET.Element]:
@@ -201,16 +227,14 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             r = find_all(node, tag)
             return r[0] if r else None
 
-        # Fehlercheck
         error_el = find_first(root, "error") or find_first(root, "Error")
         if error_el is not None:
             msg = error_el.get("message") or error_el.text or "Unbekannter Fehler"
             _LOGGER.warning("DHL Parcel DE Fehler für %s: %s", tracking_number, msg)
-            if "not found" in msg.lower() or "nicht gefunden" in msg.lower():
+            if "not found" in msg.lower():
                 return {"status": {"status": "not-found", "description": "Sendung nicht gefunden"}, "events": []}
             return {"_error": msg}
 
-        # Ereignisse
         events: list[dict[str, Any]] = []
         for evt in (find_all(root, "data-set") or find_all(root, "event")):
             a = evt.attrib
@@ -225,20 +249,13 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         first = events[0] if events else {}
         raw   = first.get("description", "").lower()
-
-        if "zugestellt" in raw or "delivered" in raw:
-            code = "delivered"
-        elif "zustellung" in raw or "in delivery" in raw:
-            code = "out-for-delivery"
-        elif "transit" in raw or "unterwegs" in raw:
-            code = "transit"
-        else:
-            code = "transit"
+        code  = ("delivered" if "zugestellt" in raw or "delivered" in raw
+                 else "out-for-delivery" if "zustellung" in raw or "in delivery" in raw
+                 else "transit")
 
         status_obj: dict[str, Any] = {
-            "status":      code,
-            "description": first.get("description", ""),
-            "timestamp":   first.get("timestamp", ""),
+            "status": code, "description": first.get("description", ""),
+            "timestamp": first.get("timestamp", ""),
         }
         if first.get("location"):
             status_obj["location"] = {"address": {"addressLocality": first["location"]}}
@@ -247,19 +264,11 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # ── Shipment Tracking – Unified (JSON) ───────────────────────────────────
 
-    async def _fetch_unified(
-        self,
-        session: aiohttp.ClientSession,
-        tracking_number: str,
-    ) -> dict[str, Any]:
+    async def _fetch_unified(self, session: aiohttp.ClientSession, tracking_number: str) -> dict[str, Any]:
         url = f"{self._tracking_url}?trackingNumber={tracking_number}"
         headers = {"DHL-API-Key": self.api_key, "Accept": "application/json"}
-
         try:
-            async with session.get(
-                url, headers=headers,
-                timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
-            ) as resp:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=API_TIMEOUT)) as resp:
                 if resp.status == 401:
                     raise UpdateFailed("Ungültiger DHL-API-Schlüssel.")
                 if resp.status == 429:

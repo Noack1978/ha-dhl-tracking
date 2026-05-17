@@ -3,30 +3,36 @@
 DOMAIN = "dhl_tracking"
 
 # Config keys
-CONF_API_KEY = "api_key"
-CONF_API_SECRET = "api_secret"
-CONF_API_TYPE = "api_type"
-CONF_SANDBOX = "sandbox"
+CONF_API_KEY        = "api_key"
+CONF_API_SECRET     = "api_secret"
+CONF_API_TYPE       = "api_type"
+CONF_GKP_USER       = "gkp_user"
+CONF_GKP_PASSWORD   = "gkp_password"
+CONF_SANDBOX        = "sandbox"
 CONF_TRACKING_NUMBERS = "tracking_numbers"
-CONF_UPDATE_INTERVAL = "update_interval"
-CONF_LABELS = "labels"
-CONF_POSTAL_CODES = "postal_codes"
+CONF_UPDATE_INTERVAL  = "update_interval"
+CONF_LABELS           = "labels"
+CONF_POSTAL_CODES     = "postal_codes"
 
 # API types
 API_TYPE_UNIFIED   = "unified"
 API_TYPE_PARCEL_DE = "parcel_de"
 
-# Shipment Tracking – Unified (JSON, nur DHL-API-Key Header)
+# Shipment Tracking – Unified (JSON, DHL-API-Key Header)
 UNIFIED_API_URL         = "https://api.dhl.com/track/shipments"
 UNIFIED_API_SANDBOX_URL = "https://api-sandbox.dhl.com/track/shipments"
 
-# Parcel DE – OAuth2 Token-Endpunkt
+# Parcel DE – OAuth2 ROPC Token-Endpunkt
 PARCEL_DE_AUTH_URL         = "https://api-eu.dhl.com/parcel/de/account/auth/ropc/v1/token"
 PARCEL_DE_AUTH_SANDBOX_URL = "https://api-sandbox.dhl.com/parcel/de/account/auth/ropc/v1/token"
 
-# Parcel DE – Tracking-Endpunkt (XML-basiert)
+# Parcel DE – Tracking-Endpunkt (XML)
 PARCEL_DE_URL         = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments"
 PARCEL_DE_SANDBOX_URL = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments"
+
+# Sandbox-Testdaten (offiziell von DHL bereitgestellt)
+SANDBOX_GKP_USER     = "user-valid"
+SANDBOX_GKP_PASSWORD = "SandboxPasswort2023!"
 
 API_TIMEOUT = 15
 
