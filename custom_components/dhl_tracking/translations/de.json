@@ -3,29 +3,29 @@
     "step": {
       "user": {
         "title": "DHL API konfigurieren",
-        "description": "API-Schlüssel und Secret vom DHL Developer Portal eingeben. Als Benutzername und Passwort dienen die gleichen Zugangsdaten wie bei der DHL-App oder auf www.dhl.de (Meine DHL). Im Sandbox-Modus können die Felder leer gelassen werden – es werden automatisch DHL-Testdaten verwendet.",
+        "description": "API-Schlüssel und Secret vom DHL Developer Portal eingeben. **Sandbox-Modus:** DHL-Benutzername und Passwort leer lassen – es werden automatisch die offiziellen DHL-Testdaten verwendet. **Produktivbetrieb:** GKP-Zugangsdaten von DHL eintragen (nicht die DHL-App-Daten).",
         "data": {
           "api_key": "API-Schlüssel (Consumer Key)",
           "api_secret": "API-Secret (Consumer Secret)",
           "api_type": "API-Typ",
-          "gkp_user": "DHL-Benutzername (Meine DHL / dhl.de Login)",
-          "gkp_password": "DHL-Passwort (Meine DHL / dhl.de Login)",
+          "gkp_user": "DHL GKP-Benutzername (nur Produktiv, Sandbox leer lassen)",
+          "gkp_password": "DHL GKP-Passwort (nur Produktiv, Sandbox leer lassen)",
           "sandbox": "Sandbox-Modus (Customer Integration Testing)"
         },
         "data_description": {
           "api_key": "Zu finden unter: developer.dhl.com → Deine App → Berechtigung → Consumer Key",
           "api_secret": "Zu finden unter: developer.dhl.com → Deine App → Berechtigung → Consumer Secret",
           "api_type": "Parcel DE Tracking empfohlen für Deutschland",
-          "gkp_user": "Gleiche Zugangsdaten wie bei der DHL-App oder www.dhl.de",
-          "gkp_password": "Gleiche Zugangsdaten wie bei der DHL-App oder www.dhl.de",
+          "gkp_user": "Im Sandbox-Modus leer lassen – Testdaten werden automatisch genutzt",
+          "gkp_password": "Im Sandbox-Modus leer lassen – Testdaten werden automatisch genutzt",
           "sandbox": "Aktivieren solange API-Status 'Customer Integration Testing' ist"
         }
       }
     },
     "error": {
       "invalid_api_key": "Ungültige API-Zugangsdaten – Consumer Key und Secret prüfen",
-      "invalid_gkp_credentials": "Ungültiger DHL-Benutzername oder Passwort – gleiche Daten wie DHL-App verwenden",
-      "missing_gkp_credentials": "DHL-Benutzername und Passwort fehlen. Im Sandbox-Modus leer lassen.",
+      "invalid_gkp_credentials": "Ungültige GKP-Zugangsdaten",
+      "missing_gkp_credentials": "GKP-Benutzername und Passwort fehlen (nur im Produktivbetrieb erforderlich)",
       "cannot_connect": "Verbindung zur DHL API fehlgeschlagen – Internetverbindung prüfen",
       "unknown": "Unbekannter Fehler – siehe Log für Details"
     },
