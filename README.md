@@ -10,15 +10,15 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 ## Features
 
-- ✅ **Parcel DE Tracking** (Post & Parcel Germany) – empfohlen für Privatpersonen in Deutschland
-- ✅ **Shipment Tracking – Unified** als Alternative (erfordert separate Freischaltung durch DHL)
+- ✅ **Parcel DE Tracking** (Post & Parcel Germany) – empfohlen für Deutschland
+- ✅ **Shipment Tracking – Unified** als Alternative
 - 📦 **Mehrere Sendungen** gleichzeitig verfolgen
-- 🏷️ Individuelle **Bezeichnungen** pro Sendung (z. B. „Amazon Mai")
+- 🏷️ Individuelle **Bezeichnungen** pro Sendung
 - 🔄 **Automatische Aktualisierung** (konfigurierbares Intervall)
 - 🛠️ **Services** zum Hinzufügen/Entfernen von Sendungen (auch per Automation)
 - 🌍 UI auf **Deutsch und Englisch**
-- 🔒 API-Key wird sicher in HA gespeichert
-- 🧪 **Sandbox-Modus** für die Test-Umgebung (Customer Integration Testing)
+- 🔒 API-Zugangsdaten werden sicher in HA gespeichert
+- 🧪 **Sandbox-Modus** mit offiziellen DHL-Testdaten
 
 ---
 
@@ -29,20 +29,26 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 1. Registriere dich kostenlos auf [developer.dhl.com](https://developer.dhl.com)
 2. Erstelle eine neue App
 3. Füge die API **„Parcel DE Tracking (Post & Parcel Germany)"** hinzu
-4. Den **API-Schlüssel (Consumer Key)** aus dem Dashboard kopieren
+4. **Consumer Key** und **Consumer Secret** aus dem Dashboard kopieren
 
-> **Hinweis:** Die API ist für Privatpersonen in Deutschland direkt verfügbar und wird sofort freigeschaltet (kein manueller Genehmigungsprozess notwendig).
-
-> **Limit:** 1000 API-Calls pro Tag im Testing-Modus. Bei Standardintervall von 30 Minuten und 5 Sendungen werden ~240 Calls/Tag benötigt.
+> **Limit:** 1000 API-Calls pro Tag im Testing-Modus.
 
 ### Welche API soll ich nehmen?
 
-| API | Zielgruppe | Freischaltung | Calls/Tag |
-|---|---|---|---|
-| **Parcel DE Tracking** ✅ | Privatpersonen (DE) | Sofort | 1000 |
-| Shipment Tracking – Unified | Alle DHL-Sparten | Manuell durch DHL | 250 |
+| API | Freischaltung | Calls/Tag |
+|---|---|---|
+| **Parcel DE Tracking** ✅ | Testing sofort, Produktion auf Anfrage | 1000 |
+| Shipment Tracking – Unified | Manuelle Prüfung durch DHL | 250 |
 
-→ **Empfehlung: Parcel DE Tracking** – sofort verfügbar, ausreichend für den Heimgebrauch.
+---
+
+## Wie die Authentifizierung funktioniert
+
+Die **Parcel DE Tracking API** verwendet **HTTP Basic Auth** – kein OAuth2, kein separater Token-Abruf:
+
+- **HTTP-Header:** `DHL-API-Key: {Consumer Key}` + `Authorization: Basic base64(Consumer Key:Consumer Secret)`
+- **XML-Body:** Sandbox-Zugangsdaten (`appname`, `password`) werden automatisch eingebettet
+- Im Sandbox-Modus werden die offiziellen DHL-Testdaten automatisch verwendet – keine eigenen Zugangsdaten nötig
 
 ---
 
@@ -68,12 +74,41 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 1. **Einstellungen → Geräte & Dienste → Integration hinzufügen**
 2. „DHL Sendungsverfolgung" suchen
-3. API-Schlüssel eingeben
-4. API-Typ wählen: **Parcel DE Tracking (Post & Parcel Germany)** – empfohlen
-5. Sandbox aktivieren, wenn dein API-Status noch „Customer Integration Testing" ist
-6. Speichern – die Integration ist eingerichtet
+3. Felder ausfüllen:
 
-### Sendungen hinzufügen
+| Feld | Wert |
+|---|---|
+| API-Schlüssel | Consumer Key von developer.dhl.com |
+| API-Secret | Consumer Secret von developer.dhl.com |
+| API-Typ | Parcel DE Tracking (empfohlen) |
+| GKP-Benutzername | Leer lassen (nur Produktivbetrieb) |
+| GKP-Passwort | Leer lassen (nur Produktivbetrieb) |
+| Sandbox | ✅ aktivieren (solange Status „Customer Integration Testing") |
+
+4. Speichern → Integration eingerichtet
+
+---
+
+## ⚠️ Sandbox-Modus: Nur Test-Sendungsnummern verwenden!
+
+Im Sandbox-Modus liefert die DHL API **ausschließlich** Daten für diese offiziell bereitgestellten Testnummern. Eigene/echte Sendungsnummern geben „Nicht gefunden" zurück.
+
+| Sandbox-Testnummer |
+|---|
+| `00340434161094042557` |
+| `00340434161094038253` |
+| `00340434161094032954` |
+| `00340434161094027318` |
+| `00340434161094022115` |
+| `00340434161094015902` |
+
+→ Eine dieser Nummern beim Hinzufügen einer Sendung eintragen um den Sandbox-Betrieb zu testen.
+
+Sobald die Produktiv-API freigeschaltet ist (Sandbox deaktivieren), können echte Sendungsnummern verwendet werden.
+
+---
+
+## Sendungen hinzufügen
 
 **Option A – UI (Options Flow):**
 Einstellungen → Geräte & Dienste → DHL → Konfigurieren → **Sendung hinzufügen**
@@ -82,8 +117,9 @@ Einstellungen → Geräte & Dienste → DHL → Konfigurieren → **Sendung hinz
 ```yaml
 service: dhl_tracking.add_tracking
 data:
-  tracking_number: "1234567890"
-  label: "Amazon Bestellung"
+  tracking_number: "00340434161094042557"
+  label: "Test-Sendung"
+  postal_code: "12345"   # optional, für erweiterte Standortdaten
 ```
 
 ---
@@ -92,12 +128,12 @@ data:
 
 Pro Sendungsnummer wird **ein Sensor** erstellt:
 
-| Eigenschaft | Beschreibung |
+| Attribut | Beschreibung |
 |---|---|
 | **State** | Lesbarer Status (z. B. „In Zustellung") |
 | `tracking_number` | Sendungsnummer |
 | `label` | Bezeichnung |
-| `status_code` | API-Statuscode (z. B. `out-for-delivery`) |
+| `status_code` | Statuscode (z. B. `out-for-delivery`) |
 | `current_location` | Aktueller Ort |
 | `last_event_time` | Zeitstempel letztes Ereignis |
 | `estimated_delivery` | Geschätztes Lieferdatum |
@@ -115,35 +151,28 @@ Pro Sendungsnummer wird **ein Sensor** erstellt:
 | `delivery-failure` | Zustellung fehlgeschlagen | ❌ |
 | `not-found` | Nicht gefunden | ❓ |
 | `exception` | Ausnahme | ⚠️ |
-| `expired` | Abgelaufen | 🕐 |
 
 ---
 
 ## Services
 
 ### `dhl_tracking.add_tracking`
-Fügt eine Sendung hinzu und erstellt einen Sensor.
 
 | Parameter | Pflicht | Beschreibung |
 |---|---|---|
 | `tracking_number` | ✅ | DHL-Sendungsnummer |
 | `label` | ❌ | Bezeichnung (wird Sensor-Name) |
-| `entry_id` | ❌ | Nur bei mehreren Instanzen nötig |
+| `postal_code` | ❌ | Empfänger-PLZ für Standortdaten |
+| `entry_id` | ❌ | Nur bei mehreren Instanzen |
 
 ### `dhl_tracking.remove_tracking`
-Entfernt eine Sendung und löscht den Sensor.
 
 | Parameter | Pflicht | Beschreibung |
 |---|---|---|
-| `tracking_number` | ✅ | DHL-Sendungsnummer |
-| `entry_id` | ❌ | Nur bei mehreren Instanzen nötig |
+| `tracking_number` | ✅ | Zu entfernende Sendungsnummer |
 
 ### `dhl_tracking.refresh`
-Erzwingt sofortige Aktualisierung (ignoriert Intervall).
-
-| Parameter | Pflicht | Beschreibung |
-|---|---|---|
-| `entry_id` | ❌ | Nur bei mehreren Instanzen nötig |
+Erzwingt sofortige Aktualisierung aller Sendungsdaten.
 
 ---
 
@@ -207,13 +236,21 @@ automation:
 
 ---
 
+## Produktivbetrieb freischalten
+
+Sobald DHL die Produktiv-API freigeschaltet hat (E-Mail-Benachrichtigung):
+
+1. Einstellungen → Geräte & Dienste → DHL → **Löschen**
+2. Integration neu einrichten mit **Sandbox deaktiviert** ☐
+3. Echte Sendungsnummern hinzufügen
+
+---
+
 ## Hinweise & Limits
 
-- **1000 Calls/Tag** im Parcel DE Testing-Modus. Bei Standard-Intervall (30 Min):
-  - 1 Sendung → ~48 Calls/Tag
-  - 5 Sendungen → ~240 Calls/Tag
-- Sandbox-Modus aktivieren, solange der API-Status „Customer Integration Testing" ist
-- API-Key wird **lokal in HA** gespeichert, nie übertragen
+- **1000 Calls/Tag** im Sandbox-Modus (Customer Integration Testing)
+- Bei Standard-Intervall 30 Min und 5 Sendungen: ~240 Calls/Tag
+- Intervall anpassbar unter Konfigurieren → Einstellungen (Minimum: 600 s)
 
 ---
 
