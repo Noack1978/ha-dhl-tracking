@@ -1,7 +1,9 @@
-"""Config Flow für DHL Sendungsverfolgung."""
+"""Config Flow fuer DHL Sendungsverfolgung."""
 from __future__ import annotations
 
+import base64
 import logging
+import urllib.parse
 from typing import Any
 
 import aiohttp
@@ -29,10 +31,11 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MIN_SCAN_INTERVAL,
-    PARCEL_DE_AUTH_SANDBOX_URL,
-    PARCEL_DE_AUTH_URL,
-    SANDBOX_GKP_PASSWORD,
-    SANDBOX_GKP_USER,
+    PARCEL_DE_SANDBOX_URL,
+    PARCEL_DE_URL,
+    SANDBOX_APPNAME,
+    SANDBOX_PASSWORD,
+    SANDBOX_TRACKING_NUMBERS,
     UNIFIED_API_SANDBOX_URL,
     UNIFIED_API_URL,
 )
@@ -40,57 +43,52 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 API_TYPE_OPTIONS = [
-    {"value": API_TYPE_PARCEL_DE, "label": "Parcel DE Tracking (Post & Parcel Germany) – empfohlen"},
-    {"value": API_TYPE_UNIFIED,   "label": "Shipment Tracking – Unified"},
+    {"value": API_TYPE_PARCEL_DE, "label": "Parcel DE Tracking (Post & Parcel Germany) - empfohlen"},
+    {"value": API_TYPE_UNIFIED,   "label": "Shipment Tracking - Unified"},
 ]
 
 
 async def _validate_credentials(
-    api_key: str, api_secret: str, api_type: str,
-    gkp_user: str, gkp_password: str, sandbox: bool,
+    api_key: str, api_secret: str, api_type: str, sandbox: bool,
 ) -> str | None:
-    """Gibt None zurück wenn OK, sonst Fehler-String."""
+    """Validierung per HTTP Basic Auth."""
     try:
         async with aiohttp.ClientSession() as session:
             if api_type == API_TYPE_PARCEL_DE:
-                auth_url = PARCEL_DE_AUTH_SANDBOX_URL if sandbox else PARCEL_DE_AUTH_URL
+                base_url    = PARCEL_DE_SANDBOX_URL if sandbox else PARCEL_DE_URL
+                appname     = SANDBOX_APPNAME  if sandbox else "validation"
+                password    = SANDBOX_PASSWORD if sandbox else "validation"
+                test_number = SANDBOX_TRACKING_NUMBERS[0] if sandbox else "0000000000"
 
-                # Im Sandbox-Modus IMMER die offiziellen DHL-Testdaten nutzen –
-                # reguläre DHL-App-Zugangsdaten funktionieren im B2B-API-System nicht.
-                if sandbox:
-                    user = SANDBOX_GKP_USER
-                    pwd  = SANDBOX_GKP_PASSWORD
-                else:
-                    user = gkp_user
-                    pwd  = gkp_password
-                    if not user or not pwd:
-                        return "missing_gkp_credentials"
-
-                payload = {
-                    "grant_type":    "password",
-                    "username":      user,
-                    "password":      pwd,
-                    "client_id":     api_key,
-                    "client_secret": api_secret,
+                xml_body = (
+                    '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
+                    f'<data appname="{appname}" language-code="de" '
+                    f'password="{password}" piece-code="{test_number}" '
+                    'request="d-get-piece-detail"/>'
+                )
+                url  = f"{base_url}?xml={urllib.parse.quote(xml_body)}"
+                auth = base64.b64encode(f"{api_key}:{api_secret}".encode()).decode()
+                headers = {
+                    "DHL-API-Key":   api_key,
+                    "Authorization": f"Basic {auth}",
+                    "Accept":        "application/xml,text/xml,*/*",
                 }
-                async with session.post(
-                    auth_url, data=payload,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                async with session.get(
+                    url, headers=headers,
                     timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
                 ) as resp:
-                    _LOGGER.debug("OAuth2 Validierung: HTTP %s", resp.status)
+                    _LOGGER.debug("Parcel DE Validierung: HTTP %s", resp.status)
                     if resp.status == 401:
                         return "invalid_api_key"
-                    if resp.status == 400:
-                        return "invalid_api_key"
-                    if resp.status == 200:
-                        result = await resp.json(content_type=None)
-                        return None if result.get("access_token") else "invalid_api_key"
                     return None
             else:
-                url = f"{UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL}?trackingNumber=validationtest"
+                url = (
+                    f"{UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL}"
+                    "?trackingNumber=validationtest"
+                )
                 async with session.get(
-                    url, headers={"DHL-API-Key": api_key, "Accept": "application/json"},
+                    url,
+                    headers={"DHL-API-Key": api_key, "Accept": "application/json"},
                     timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
                 ) as resp:
                     return "invalid_api_key" if resp.status == 401 else None
@@ -118,8 +116,6 @@ class DhlTrackingConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_API_KEY],
                 user_input.get(CONF_API_SECRET, ""),
                 api_type,
-                user_input.get(CONF_GKP_USER, ""),
-                user_input.get(CONF_GKP_PASSWORD, ""),
                 sandbox,
             )
             if error:
@@ -149,7 +145,10 @@ class DhlTrackingConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_API_KEY): str,
                 vol.Required(CONF_API_SECRET): str,
                 vol.Required(CONF_API_TYPE, default=API_TYPE_PARCEL_DE): SelectSelector(
-                    SelectSelectorConfig(options=API_TYPE_OPTIONS, mode=SelectSelectorMode.LIST)
+                    SelectSelectorConfig(
+                        options=API_TYPE_OPTIONS,
+                        mode=SelectSelectorMode.LIST,
+                    )
                 ),
                 vol.Optional(CONF_GKP_USER, default=""): str,
                 vol.Optional(CONF_GKP_PASSWORD, default=""): str,
@@ -171,18 +170,26 @@ class DhlTrackingOptionsFlow(OptionsFlow):
         self._tracking_numbers = list(config_entry.options.get(CONF_TRACKING_NUMBERS, []))
         self._labels           = dict(config_entry.options.get(CONF_LABELS, {}))
         self._postal_codes     = dict(config_entry.options.get(CONF_POSTAL_CODES, {}))
-        self._update_interval  = config_entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        self._update_interval  = config_entry.options.get(
+            CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         return await self.async_step_menu()
 
-    async def async_step_menu(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_menu(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         return self.async_show_menu(
             step_id="menu",
             menu_options=["add_tracking", "manage_trackings", "settings"],
         )
 
-    async def async_step_add_tracking(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_add_tracking(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             number = user_input["tracking_number"].strip().replace(" ", "").upper()
@@ -194,8 +201,10 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                 errors["tracking_number"] = "tracking_already_added"
             else:
                 self._tracking_numbers.append(number)
-                if label: self._labels[number] = label
-                if plz:   self._postal_codes[number] = plz
+                if label:
+                    self._labels[number] = label
+                if plz:
+                    self._postal_codes[number] = plz
                 return self._save()
         return self.async_show_form(
             step_id="add_tracking",
@@ -207,10 +216,13 @@ class DhlTrackingOptionsFlow(OptionsFlow):
             errors=errors,
         )
 
-    async def async_step_manage_trackings(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_manage_trackings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         if not self._tracking_numbers:
             return self.async_show_form(
-                step_id="manage_trackings", data_schema=vol.Schema({}),
+                step_id="manage_trackings",
+                data_schema=vol.Schema({}),
                 errors={"base": "no_trackings"},
             )
         if user_input is not None:
@@ -221,15 +233,17 @@ class DhlTrackingOptionsFlow(OptionsFlow):
             return self._save()
         return self.async_show_form(
             step_id="manage_trackings",
-            data_schema=vol.Schema(
-                {vol.Optional("remove", default=[]): cv.multi_select(
+            data_schema=vol.Schema({
+                vol.Optional("remove", default=[]): cv.multi_select(
                     {n: self._labels.get(n, n) for n in self._tracking_numbers}
-                )}
-            ),
+                ),
+            }),
             errors={},
         )
 
-    async def async_step_settings(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+    async def async_step_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             interval = int(user_input[CONF_UPDATE_INTERVAL])
@@ -241,17 +255,20 @@ class DhlTrackingOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="settings",
             data_schema=vol.Schema({
-                vol.Required(CONF_UPDATE_INTERVAL, default=self._update_interval): vol.All(
-                    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL)
-                )
+                vol.Required(
+                    CONF_UPDATE_INTERVAL, default=self._update_interval
+                ): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL)),
             }),
             errors=errors,
         )
 
     def _save(self) -> ConfigFlowResult:
-        return self.async_create_entry(title="", data={
-            CONF_TRACKING_NUMBERS: self._tracking_numbers,
-            CONF_UPDATE_INTERVAL:  self._update_interval,
-            CONF_LABELS:           self._labels,
-            CONF_POSTAL_CODES:     self._postal_codes,
-        })
+        return self.async_create_entry(
+            title="",
+            data={
+                CONF_TRACKING_NUMBERS: self._tracking_numbers,
+                CONF_UPDATE_INTERVAL:  self._update_interval,
+                CONF_LABELS:           self._labels,
+                CONF_POSTAL_CODES:     self._postal_codes,
+            },
+                    )
