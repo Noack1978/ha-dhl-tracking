@@ -174,7 +174,7 @@ class DhlShipmentSensor(CoordinatorEntity[DhlTrackingCoordinator], SensorEntity)
             "identifiers": {(DOMAIN, self._config_entry.entry_id)},
             "name": "DHL Sendungsverfolgung",
             "manufacturer": "DHL Group",
-            "model": "Shipment Tracking – Unified API",
+            "model": "Parcel DE Tracking API" if self._config_entry.data.get("api_type") == "parcel_de" else "Shipment Tracking – Unified API",
             "configuration_url": "https://developer.dhl.com",
         }
 

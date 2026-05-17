@@ -28,7 +28,7 @@ PARCEL_DE_AUTH_SANDBOX_URL = "https://api-sandbox.dhl.com/parcel/de/account/auth
 
 # Parcel DE – Tracking-Endpunkt (XML)
 PARCEL_DE_URL         = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments"
-PARCEL_DE_SANDBOX_URL = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments"
+PARCEL_DE_SANDBOX_URL = "https://api-sandbox.dhl.com/parcel/de/tracking/v0/shipments"
 
 # Sandbox-Testdaten (offiziell von DHL bereitgestellt)
 SANDBOX_GKP_USER     = "user-valid"
