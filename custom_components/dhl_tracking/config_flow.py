@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import urllib.parse
 from typing import Any
 
 import aiohttp
@@ -55,12 +54,17 @@ async def _validate_credentials(
         async with aiohttp.ClientSession() as session:
             if api_type == API_TYPE_PARCEL_DE:
                 auth_url = PARCEL_DE_AUTH_SANDBOX_URL if sandbox else PARCEL_DE_AUTH_URL
-                # Im Sandbox-Modus offizielle Testdaten nutzen falls keine eigenen eingegeben
-                user = gkp_user or (SANDBOX_GKP_USER if sandbox else "")
-                pwd  = gkp_password or (SANDBOX_GKP_PASSWORD if sandbox else "")
 
-                if not user or not pwd:
-                    return "missing_gkp_credentials"
+                # Im Sandbox-Modus IMMER die offiziellen DHL-Testdaten nutzen –
+                # reguläre DHL-App-Zugangsdaten funktionieren im B2B-API-System nicht.
+                if sandbox:
+                    user = SANDBOX_GKP_USER
+                    pwd  = SANDBOX_GKP_PASSWORD
+                else:
+                    user = gkp_user
+                    pwd  = gkp_password
+                    if not user or not pwd:
+                        return "missing_gkp_credentials"
 
                 payload = {
                     "grant_type":    "password",
@@ -74,15 +78,15 @@ async def _validate_credentials(
                     headers={"Content-Type": "application/x-www-form-urlencoded"},
                     timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
                 ) as resp:
-                    _LOGGER.debug("Validierung OAuth2: HTTP %s", resp.status)
+                    _LOGGER.debug("OAuth2 Validierung: HTTP %s", resp.status)
                     if resp.status == 401:
                         return "invalid_api_key"
                     if resp.status == 400:
-                        return "invalid_gkp_credentials"
+                        return "invalid_api_key"
                     if resp.status == 200:
                         result = await resp.json(content_type=None)
                         return None if result.get("access_token") else "invalid_api_key"
-                    return None  # Anderer Status → beim ersten echten Call prüfen
+                    return None
             else:
                 url = f"{UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL}?trackingNumber=validationtest"
                 async with session.get(
@@ -193,7 +197,6 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                 if label: self._labels[number] = label
                 if plz:   self._postal_codes[number] = plz
                 return self._save()
-
         return self.async_show_form(
             step_id="add_tracking",
             data_schema=vol.Schema({
@@ -216,7 +219,6 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                 self._labels.pop(n, None)
                 self._postal_codes.pop(n, None)
             return self._save()
-
         return self.async_show_form(
             step_id="manage_trackings",
             data_schema=vol.Schema(
@@ -236,7 +238,6 @@ class DhlTrackingOptionsFlow(OptionsFlow):
             else:
                 self._update_interval = interval
                 return self._save()
-
         return self.async_show_form(
             step_id="settings",
             data_schema=vol.Schema({

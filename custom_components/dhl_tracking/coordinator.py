@@ -54,8 +54,8 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Im Sandbox-Modus offizielle DHL-Testdaten verwenden wenn keine eigenen vorhanden
         if api_type == API_TYPE_PARCEL_DE and sandbox:
-            self._gkp_user     = gkp_user or SANDBOX_GKP_USER
-            self._gkp_password = gkp_password or SANDBOX_GKP_PASSWORD
+            self._gkp_user     = SANDBOX_GKP_USER
+            self._gkp_password = SANDBOX_GKP_PASSWORD
         else:
             self._gkp_user     = gkp_user
             self._gkp_password = gkp_password
