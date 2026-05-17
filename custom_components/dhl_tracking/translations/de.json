@@ -3,23 +3,29 @@
     "step": {
       "user": {
         "title": "DHL API konfigurieren",
-        "description": "API-Schlüssel und API-Secret vom DHL Developer Portal eingeben (developer.dhl.com → Deine App → Berechtigung).",
+        "description": "API-Schlüssel und Secret vom DHL Developer Portal eingeben. Als Benutzername und Passwort dienen die gleichen Zugangsdaten wie bei der DHL-App oder auf www.dhl.de (Meine DHL). Im Sandbox-Modus können die Felder leer gelassen werden – es werden automatisch DHL-Testdaten verwendet.",
         "data": {
           "api_key": "API-Schlüssel (Consumer Key)",
           "api_secret": "API-Secret (Consumer Secret)",
           "api_type": "API-Typ",
+          "gkp_user": "DHL-Benutzername (Meine DHL / dhl.de Login)",
+          "gkp_password": "DHL-Passwort (Meine DHL / dhl.de Login)",
           "sandbox": "Sandbox-Modus (Customer Integration Testing)"
         },
         "data_description": {
-          "api_key": "Zu finden unter: Deine App → Berechtigung → Consumer Key",
-          "api_secret": "Zu finden unter: Deine App → Berechtigung → Consumer Secret",
-          "api_type": "Parcel DE Tracking empfohlen für Privatpersonen in Deutschland",
-          "sandbox": "Aktivieren solange der API-Status 'Customer Integration Testing' ist"
+          "api_key": "Zu finden unter: developer.dhl.com → Deine App → Berechtigung → Consumer Key",
+          "api_secret": "Zu finden unter: developer.dhl.com → Deine App → Berechtigung → Consumer Secret",
+          "api_type": "Parcel DE Tracking empfohlen für Deutschland",
+          "gkp_user": "Gleiche Zugangsdaten wie bei der DHL-App oder www.dhl.de",
+          "gkp_password": "Gleiche Zugangsdaten wie bei der DHL-App oder www.dhl.de",
+          "sandbox": "Aktivieren solange API-Status 'Customer Integration Testing' ist"
         }
       }
     },
     "error": {
-      "invalid_api_key": "Ungültige Zugangsdaten – API-Schlüssel und Secret auf developer.dhl.com prüfen",
+      "invalid_api_key": "Ungültige API-Zugangsdaten – Consumer Key und Secret prüfen",
+      "invalid_gkp_credentials": "Ungültiger DHL-Benutzername oder Passwort – gleiche Daten wie DHL-App verwenden",
+      "missing_gkp_credentials": "DHL-Benutzername und Passwort fehlen. Im Sandbox-Modus leer lassen.",
       "cannot_connect": "Verbindung zur DHL API fehlgeschlagen – Internetverbindung prüfen",
       "unknown": "Unbekannter Fehler – siehe Log für Details"
     },
@@ -39,38 +45,33 @@
       },
       "add_tracking": {
         "title": "Sendung hinzufügen",
-        "description": "Sendungsnummer eingeben. Der Sensor wird nach dem Speichern automatisch erstellt.",
         "data": {
           "tracking_number": "Sendungsnummer",
           "label": "Bezeichnung (optional)",
-          "postal_code": "Postleitzahl Empfänger (optional)"
+          "postal_code": "Postleitzahl Empfänger (optional, empfohlen)"
         },
         "data_description": {
           "tracking_number": "Vollständige DHL-Sendungsnummer ohne Leerzeichen",
-          "label": "Lesbare Bezeichnung z. B. 'Amazon Mai' (wird als Sensor-Name verwendet)",
-          "postal_code": "Empfänger-PLZ für erweiterte Standortdaten (empfohlen)"
+          "label": "z. B. 'Amazon Mai' – wird als Sensor-Name verwendet",
+          "postal_code": "Für vollständige Standort- und Adressdaten"
         }
       },
       "manage_trackings": {
         "title": "Sendungen verwalten",
         "description": "Sendungen auswählen, die entfernt werden sollen.",
-        "data": {
-          "remove": "Zu entfernende Sendungen"
-        }
+        "data": { "remove": "Zu entfernende Sendungen" }
       },
       "settings": {
         "title": "Einstellungen",
-        "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min). Standard: 1800 s (30 Min).",
-        "data": {
-          "update_interval": "Aktualisierungsintervall (Sekunden)"
-        }
+        "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min).",
+        "data": { "update_interval": "Aktualisierungsintervall (Sekunden)" }
       }
     },
     "error": {
-      "interval_too_low": "Mindestintervall ist 600 Sekunden (10 Minuten)",
+      "interval_too_low": "Mindestintervall ist 600 Sekunden",
       "invalid_tracking_number": "Sendungsnummer ist zu kurz oder ungültig",
       "tracking_already_added": "Diese Sendungsnummer wird bereits verfolgt",
-      "no_trackings": "Keine Sendungen gespeichert – zuerst eine Sendung hinzufügen"
+      "no_trackings": "Keine Sendungen gespeichert"
     }
   }
 }

@@ -3,24 +3,30 @@
     "step": {
       "user": {
         "title": "Configure DHL API",
-        "description": "Enter your API key and secret from the DHL Developer Portal (developer.dhl.com → Your App → Authorization).",
+        "description": "Enter your API key and secret from the DHL Developer Portal. For username and password use your DHL app / www.dhl.de (Meine DHL) credentials. In sandbox mode these fields can be left empty – official DHL test credentials will be used automatically.",
         "data": {
           "api_key": "API Key (Consumer Key)",
           "api_secret": "API Secret (Consumer Secret)",
           "api_type": "API Type",
+          "gkp_user": "DHL Username (Meine DHL / dhl.de login)",
+          "gkp_password": "DHL Password (Meine DHL / dhl.de login)",
           "sandbox": "Sandbox mode (Customer Integration Testing)"
         },
         "data_description": {
-          "api_key": "Found at: Your App → Authorization → Consumer Key",
-          "api_secret": "Found at: Your App → Authorization → Consumer Secret",
-          "api_type": "Parcel DE Tracking recommended for private persons in Germany",
+          "api_key": "Found at: developer.dhl.com → Your App → Authorization → Consumer Key",
+          "api_secret": "Found at: developer.dhl.com → Your App → Authorization → Consumer Secret",
+          "api_type": "Parcel DE Tracking recommended for Germany",
+          "gkp_user": "Same credentials as the DHL app or www.dhl.de",
+          "gkp_password": "Same credentials as the DHL app or www.dhl.de",
           "sandbox": "Enable while API status is 'Customer Integration Testing'"
         }
       }
     },
     "error": {
-      "invalid_api_key": "Invalid credentials – check API key and secret on developer.dhl.com",
-      "cannot_connect": "Failed to connect to DHL API – check your internet connection",
+      "invalid_api_key": "Invalid API credentials – check Consumer Key and Secret",
+      "invalid_gkp_credentials": "Invalid DHL username or password – use the same credentials as the DHL app",
+      "missing_gkp_credentials": "DHL username and password are required. Leave empty in sandbox mode.",
+      "cannot_connect": "Failed to connect to DHL API – check internet connection",
       "unknown": "Unknown error – check the logs for details"
     },
     "abort": {
@@ -39,38 +45,33 @@
       },
       "add_tracking": {
         "title": "Add shipment",
-        "description": "Enter a tracking number. The sensor will be created automatically after saving.",
         "data": {
           "tracking_number": "Tracking number",
           "label": "Label (optional)",
-          "postal_code": "Recipient postal code (optional)"
+          "postal_code": "Recipient postal code (optional, recommended)"
         },
         "data_description": {
           "tracking_number": "Full DHL tracking number without spaces",
-          "label": "Human-readable label e.g. 'Amazon May' (used as sensor name)",
-          "postal_code": "Recipient ZIP code for extended location data (recommended)"
+          "label": "e.g. 'Amazon May' – used as sensor name",
+          "postal_code": "For complete location and address data"
         }
       },
       "manage_trackings": {
         "title": "Manage shipments",
         "description": "Select shipments to remove.",
-        "data": {
-          "remove": "Shipments to remove"
-        }
+        "data": { "remove": "Shipments to remove" }
       },
       "settings": {
         "title": "Settings",
-        "description": "Update interval in seconds. Minimum: 600 s (10 min). Default: 1800 s (30 min).",
-        "data": {
-          "update_interval": "Update interval (seconds)"
-        }
+        "description": "Update interval in seconds. Minimum: 600 s (10 min).",
+        "data": { "update_interval": "Update interval (seconds)" }
       }
     },
     "error": {
-      "interval_too_low": "Minimum interval is 600 seconds (10 minutes)",
+      "interval_too_low": "Minimum interval is 600 seconds",
       "invalid_tracking_number": "Tracking number is too short or invalid",
       "tracking_already_added": "This tracking number is already being tracked",
-      "no_trackings": "No shipments saved – add a shipment first"
+      "no_trackings": "No shipments saved"
     }
   }
 }
