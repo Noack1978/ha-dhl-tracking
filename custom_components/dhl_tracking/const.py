@@ -18,25 +18,32 @@ CONF_POSTAL_CODES     = "postal_codes"
 API_TYPE_UNIFIED   = "unified"
 API_TYPE_PARCEL_DE = "parcel_de"
 
-# Shipment Tracking – Unified (JSON, DHL-API-Key Header)
+# Shipment Tracking – Unified (JSON, nur DHL-API-Key Header)
 UNIFIED_API_URL         = "https://api.dhl.com/track/shipments"
 UNIFIED_API_SANDBOX_URL = "https://api-sandbox.dhl.com/track/shipments"
 
-# Parcel DE – OAuth2 ROPC Token-Endpunkt
-PARCEL_DE_AUTH_URL         = "https://api-eu.dhl.com/parcel/de/account/auth/ropc/v1/token"
-PARCEL_DE_AUTH_SANDBOX_URL = "https://api-sandbox.dhl.com/parcel/de/account/auth/ropc/v1/token"
-
-# Parcel DE – Tracking-Endpunkt (XML)
+# Parcel DE Tracking – HTTP Basic Auth + API Key, XML im Query-Parameter
+# Authentifizierung: Authorization: Basic base64(api_key:api_secret) + DHL-API-Key Header
 PARCEL_DE_URL         = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments"
 PARCEL_DE_SANDBOX_URL = "https://api-sandbox.dhl.com/parcel/de/tracking/v0/shipments"
 
-# Sandbox-Testdaten (offiziell von DHL bereitgestellt)
-SANDBOX_GKP_USER     = "user-valid"
-SANDBOX_GKP_PASSWORD = "SandboxPasswort2023!"
+# Sandbox-Testzugangsdaten (offiziell von DHL bereitgestellt)
+# Gehen als Attribute in den XML-Body – KEIN OAuth2!
+SANDBOX_APPNAME  = "zt12345"
+SANDBOX_PASSWORD = "geheim"
+
+# Offizielle DHL Sandbox-Sendungsnummern zum Testen
+SANDBOX_TRACKING_NUMBERS = [
+    "00340434161094042557",
+    "00340434161094038253",
+    "00340434161094032954",
+    "00340434161094027318",
+    "00340434161094022115",
+    "00340434161094015902",
+]
 
 API_TIMEOUT = 15
 
-# Defaults
 DEFAULT_SCAN_INTERVAL = 1800
 MIN_SCAN_INTERVAL     = 600
 
