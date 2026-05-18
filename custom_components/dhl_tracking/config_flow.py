@@ -13,8 +13,9 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import (
-    SelectSelector, SelectSelectorConfig, SelectSelectorMode,
-    TextSelector, TextSelectorConfig, TextSelectorType,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 
 from .const import (
@@ -310,9 +311,7 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_IMAP_USERNAME,
                     default=self._imap_opts[CONF_IMAP_USERNAME]): str,
                 vol.Optional(CONF_IMAP_PASSWORD,
-                    default=self._imap_opts[CONF_IMAP_PASSWORD]): TextSelector(
-                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
-                ),
+                    default=self._imap_opts[CONF_IMAP_PASSWORD]): str,
                 vol.Optional(CONF_IMAP_FOLDER,
                     default=self._imap_opts[CONF_IMAP_FOLDER]): str,
                 vol.Optional(CONF_IMAP_SCAN_INTERVAL,
