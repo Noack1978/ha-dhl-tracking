@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
-from .const import (
+from homeassistant.helpers import entity_registry as er
     API_TYPE_PARCEL_DE,
     CONF_API_KEY,
     CONF_API_SECRET,
@@ -139,6 +139,15 @@ def _async_register_services(hass: HomeAssistant) -> None:
         if not entry:
             return
         number = call.data["tracking_number"].strip().replace(" ", "").upper()
+
+        # Entitaet aus der Registry loeschen damit sie komplett verschwindet
+        entity_reg = er.async_get(hass)
+        unique_id  = f"dhl_{entry.entry_id}_{number}"
+        entity_id  = entity_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
+        if entity_id:
+            entity_reg.async_remove(entity_id)
+            _LOGGER.debug("Entitaet %s aus Registry entfernt.", entity_id)
+
         hass.config_entries.async_update_entry(
             entry, options={
                 **entry.options,
