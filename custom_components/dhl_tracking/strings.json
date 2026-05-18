@@ -3,31 +3,29 @@
     "step": {
       "user": {
         "title": "DHL API konfigurieren",
-        "description": "API-Schlüssel und Secret vom DHL Developer Portal eingeben. **Sandbox-Modus:** DHL-Benutzername und Passwort leer lassen – es werden automatisch die offiziellen DHL-Testdaten verwendet. **Produktivbetrieb:** GKP-Zugangsdaten von DHL eintragen (nicht die DHL-App-Daten).",
+        "description": "API-Schluessel und Secret vom DHL Developer Portal eingeben. Sandbox-Modus: GKP-Felder leer lassen. Produktivbetrieb: GKP-Zugangsdaten von DHL eintragen.",
         "data": {
-          "api_key": "API-Schlüssel (Consumer Key)",
+          "api_key": "API-Schluessel (Consumer Key)",
           "api_secret": "API-Secret (Consumer Secret)",
           "api_type": "API-Typ",
-          "gkp_user": "DHL GKP-Benutzername (nur Produktiv, Sandbox leer lassen)",
-          "gkp_password": "DHL GKP-Passwort (nur Produktiv, Sandbox leer lassen)",
+          "gkp_user": "GKP-Benutzername (nur Produktiv, Sandbox leer lassen)",
+          "gkp_password": "GKP-Passwort (nur Produktiv, Sandbox leer lassen)",
           "sandbox": "Sandbox-Modus (Customer Integration Testing)"
         },
         "data_description": {
-          "api_key": "Zu finden unter: developer.dhl.com → Deine App → Berechtigung → Consumer Key",
-          "api_secret": "Zu finden unter: developer.dhl.com → Deine App → Berechtigung → Consumer Secret",
-          "api_type": "Parcel DE Tracking empfohlen für Deutschland",
-          "gkp_user": "Im Sandbox-Modus leer lassen – Testdaten werden automatisch genutzt",
-          "gkp_password": "Im Sandbox-Modus leer lassen – Testdaten werden automatisch genutzt",
+          "api_key": "developer.dhl.com -> Deine App -> Berechtigung -> Consumer Key",
+          "api_secret": "developer.dhl.com -> Deine App -> Berechtigung -> Consumer Secret",
+          "api_type": "Parcel DE Tracking empfohlen fuer Deutschland",
+          "gkp_user": "Im Sandbox-Modus leer lassen",
+          "gkp_password": "Im Sandbox-Modus leer lassen",
           "sandbox": "Aktivieren solange API-Status 'Customer Integration Testing' ist"
         }
       }
     },
     "error": {
-      "invalid_api_key": "Ungültige API-Zugangsdaten – Consumer Key und Secret prüfen",
-      "invalid_gkp_credentials": "Ungültige GKP-Zugangsdaten",
-      "missing_gkp_credentials": "GKP-Benutzername und Passwort fehlen (nur im Produktivbetrieb erforderlich)",
-      "cannot_connect": "Verbindung zur DHL API fehlgeschlagen – Internetverbindung prüfen",
-      "unknown": "Unbekannter Fehler – siehe Log für Details"
+      "invalid_api_key": "Ungueltige API-Zugangsdaten - Consumer Key und Secret pruefen",
+      "cannot_connect": "Verbindung zur DHL API fehlgeschlagen",
+      "unknown": "Unbekannter Fehler - siehe Log"
     },
     "abort": {
       "already_configured": "DHL Sendungsverfolgung ist bereits konfiguriert"
@@ -38,40 +36,74 @@
       "menu": {
         "title": "DHL Sendungsverfolgung",
         "menu_options": {
-          "add_tracking": "Sendung hinzufügen",
+          "add_tracking": "Sendung hinzufuegen",
           "manage_trackings": "Sendungen verwalten / entfernen",
+          "email_scanner": "E-Mail-Scanner (automatisch)",
           "settings": "Einstellungen"
         }
       },
       "add_tracking": {
-        "title": "Sendung hinzufügen",
+        "title": "Sendung hinzufuegen",
         "data": {
           "tracking_number": "Sendungsnummer",
           "label": "Bezeichnung (optional)",
-          "postal_code": "Postleitzahl Empfänger (optional, empfohlen)"
+          "postal_code": "Postleitzahl Empfaenger (optional)"
         },
         "data_description": {
-          "tracking_number": "Vollständige DHL-Sendungsnummer ohne Leerzeichen",
-          "label": "z. B. 'Amazon Mai' – wird als Sensor-Name verwendet",
-          "postal_code": "Für vollständige Standort- und Adressdaten"
+          "tracking_number": "Vollstaendige DHL-Sendungsnummer ohne Leerzeichen",
+          "label": "z. B. 'Amazon Mai' - wird als Sensor-Name verwendet",
+          "postal_code": "Fuer vollstaendige Standortdaten"
         }
       },
       "manage_trackings": {
         "title": "Sendungen verwalten",
-        "description": "Sendungen auswählen, die entfernt werden sollen.",
-        "data": { "remove": "Zu entfernende Sendungen" }
+        "description": "Sendungen auswaehlen, die entfernt werden sollen.",
+        "data": {
+          "remove": "Zu entfernende Sendungen"
+        }
+      },
+      "email_scanner": {
+        "title": "E-Mail-Scanner",
+        "description": "Der Scanner verbindet sich per IMAP und erkennt DHL-Sendungsnummern automatisch. Unterstuetzte Anbieter: Gmail, GMX, web.de, T-Online, Outlook, Yahoo, IONOS, freenet. WICHTIG: Bei 2-Faktor-Authentifizierung (2FA) muss ein App-Passwort verwendet werden (kein normales Konto-Passwort). Gmail: Google-Konto -> Sicherheit -> App-Passwoerter. GMX/web.de: IMAP muss im Postfach aktiviert sein (Einstellungen -> E-Mail -> IMAP). Der Server wird automatisch eingetragen - IMAP-Server-Feld nur bei Benutzerdefiniert ausfullen. Die Zugangsdaten werden beim ersten Scan geprueft, nicht sofort.",
+        "data": {
+          "imap_enabled": "E-Mail-Scanner aktivieren",
+          "imap_provider": "E-Mail-Anbieter",
+          "imap_server": "IMAP-Server (bei 'Benutzerdefiniert' ausfullen)",
+          "imap_port": "IMAP-Port",
+          "imap_ssl": "SSL/TLS verwenden",
+          "imap_username": "E-Mail-Adresse",
+          "imap_password": "Passwort / App-Passwort",
+          "imap_folder": "Postfach-Ordner",
+          "imap_scan_interval": "Scan-Intervall (Sekunden)"
+        },
+        "data_description": {
+          "imap_enabled": "Aktiviert den automatischen E-Mail-Scan",
+          "imap_provider": "Waehle deinen Anbieter - Server wird automatisch eingetragen",
+          "imap_server": "Nur bei 'Benutzerdefiniert' notwendig, z. B. imap.meinserver.de",
+          "imap_port": "Standard: 993 (SSL)",
+          "imap_ssl": "Empfohlen: aktiviert",
+          "imap_username": "Deine vollstaendige E-Mail-Adresse",
+          "imap_password": "Bei Gmail: App-Passwort aus Google-Konto-Einstellungen",
+          "imap_folder": "Standard: INBOX",
+          "imap_scan_interval": "Wie oft der Posteingang geprueft wird. Standard: 300 (5 Min)"
+        }
       },
       "settings": {
         "title": "Einstellungen",
         "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min).",
-        "data": { "update_interval": "Aktualisierungsintervall (Sekunden)" }
+        "data": {
+          "update_interval": "Aktualisierungsintervall (Sekunden)"
+        }
       }
     },
     "error": {
       "interval_too_low": "Mindestintervall ist 600 Sekunden",
-      "invalid_tracking_number": "Sendungsnummer ist zu kurz oder ungültig",
+      "invalid_tracking_number": "Sendungsnummer ist zu kurz oder ungueltig",
       "tracking_already_added": "Diese Sendungsnummer wird bereits verfolgt",
-      "no_trackings": "Keine Sendungen gespeichert"
+      "no_trackings": "Keine Sendungen gespeichert",
+      "imap_missing_fields": "E-Mail-Adresse und Passwort sind Pflichtfelder wenn der Scanner aktiviert ist",
+      "imap_invalid_credentials": "Ungueltige IMAP-Zugangsdaten - E-Mail und Passwort pruefen",
+      "imap_connection_error": "IMAP-Verbindung fehlgeschlagen - Server und Port pruefen"
     }
   }
 }
