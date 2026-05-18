@@ -13,9 +13,9 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import (
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
+    SelectSelector, SelectSelectorConfig, SelectSelectorMode,
+    TextSelector, TextSelectorConfig, TextSelectorType,
+    NumberSelector, NumberSelectorConfig, NumberSelectorMode,
 )
 
 from .const import (
@@ -257,7 +257,7 @@ class DhlTrackingOptionsFlow(OptionsFlow):
             server = auto_server if (auto_server and provider != "custom") \
                      else user_input.get(CONF_IMAP_SERVER, "")
 
-            # Port: aus Provider-Preset oder manuell (Coerce gibt int)
+            # Port: aus Provider-Preset oder manuell (NumberSelector gibt float/int)
             raw_port = user_input.get(CONF_IMAP_PORT, auto_port or DEFAULT_IMAP_PORT)
             port = int(float(raw_port)) if raw_port else (auto_port or DEFAULT_IMAP_PORT)
 
@@ -303,20 +303,30 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                     )
                 ),
                 vol.Optional(CONF_IMAP_SERVER,
-                    default=self._imap_opts[CONF_IMAP_SERVER]): str,
+                    default=self._imap_opts[CONF_IMAP_SERVER]): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.TEXT)
+                ),
                 vol.Optional(CONF_IMAP_PORT,
-                    default=cur_port): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+                    default=cur_port): NumberSelector(
+                    NumberSelectorConfig(min=1, max=65535, step=1, mode=NumberSelectorMode.BOX)
+                ),
                 vol.Optional(CONF_IMAP_SSL,
                     default=self._imap_opts[CONF_IMAP_SSL]): bool,
                 vol.Optional(CONF_IMAP_USERNAME,
-                    default=self._imap_opts[CONF_IMAP_USERNAME]): str,
+                    default=self._imap_opts[CONF_IMAP_USERNAME]): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.EMAIL)
+                ),
                 vol.Optional(CONF_IMAP_PASSWORD,
-                    default=self._imap_opts[CONF_IMAP_PASSWORD]): str,
+                    default=self._imap_opts[CONF_IMAP_PASSWORD]): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                ),
                 vol.Optional(CONF_IMAP_FOLDER,
-                    default=self._imap_opts[CONF_IMAP_FOLDER]): str,
+                    default=self._imap_opts[CONF_IMAP_FOLDER]): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.TEXT)
+                ),
                 vol.Optional(CONF_IMAP_SCAN_INTERVAL,
-                    default=self._imap_opts[CONF_IMAP_SCAN_INTERVAL]): vol.All(
-                    vol.Coerce(int), vol.Range(min=60, max=3600)
+                    default=self._imap_opts[CONF_IMAP_SCAN_INTERVAL]): NumberSelector(
+                    NumberSelectorConfig(min=60, max=3600, step=60, mode=NumberSelectorMode.BOX)
                 ),
             }),
             errors=errors,
