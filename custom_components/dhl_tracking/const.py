@@ -2,7 +2,7 @@
 
 DOMAIN = "dhl_tracking"
 
-# Config keys
+# ── Basis-Konfiguration ──────────────────────────────────────────────────────
 CONF_API_KEY        = "api_key"
 CONF_API_SECRET     = "api_secret"
 CONF_API_TYPE       = "api_type"
@@ -14,25 +14,81 @@ CONF_UPDATE_INTERVAL  = "update_interval"
 CONF_LABELS           = "labels"
 CONF_POSTAL_CODES     = "postal_codes"
 
-# API types
+# ── IMAP E-Mail-Scanner ──────────────────────────────────────────────────────
+CONF_IMAP_ENABLED       = "imap_enabled"
+CONF_IMAP_PROVIDER      = "imap_provider"
+CONF_IMAP_SERVER        = "imap_server"
+CONF_IMAP_PORT          = "imap_port"
+CONF_IMAP_SSL           = "imap_ssl"
+CONF_IMAP_USERNAME      = "imap_username"
+CONF_IMAP_PASSWORD      = "imap_password"
+CONF_IMAP_FOLDER        = "imap_folder"
+CONF_IMAP_SCAN_INTERVAL = "imap_scan_interval"
+
+DEFAULT_IMAP_PORT          = 993
+DEFAULT_IMAP_FOLDER        = "INBOX"
+DEFAULT_IMAP_SCAN_INTERVAL = 300  # 5 Minuten
+
+# Bekannte IMAP-Provider (Label → (Server, Port))
+IMAP_PROVIDERS: dict[str, tuple[str, int]] = {
+    "gmail":    ("imap.gmail.com",             993),
+    "gmx":      ("imap.gmx.net",               993),
+    "web_de":   ("imap.web.de",                993),
+    "t_online": ("secureimap.t-online.de",     993),
+    "outlook":  ("outlook.office365.com",      993),
+    "yahoo":    ("imap.mail.yahoo.com",        993),
+    "ionos":    ("imap.ionos.de",              993),
+    "freenet":  ("mx.freenet.de",              993),
+    "custom":   ("",                           993),
+}
+
+IMAP_PROVIDER_LABELS: dict[str, str] = {
+    "gmail":    "Gmail (Google)",
+    "gmx":      "GMX",
+    "web_de":   "web.de",
+    "t_online": "T-Online",
+    "outlook":  "Outlook / Hotmail / Live",
+    "yahoo":    "Yahoo Mail",
+    "ionos":    "IONOS (1&1)",
+    "freenet":  "freenet Mail",
+    "custom":   "Benutzerdefiniert",
+}
+
+# DHL-Absenderdomains
+DHL_SENDERS = [
+    "@dhl.de",
+    "@dhl.com",
+    "@deutschepost.de",
+    "@post.de",
+    "@paket.dhl.de",
+    "@noreply.dhl.de",
+    "@dhl-news.com",
+]
+
+# Sendungsnummer-Regex-Muster (ohne \b – werden im Scanner kombiniert)
+DHL_TRACKING_PATTERNS = [
+    r"00\d{18}",         # Standard DHL Paket DE (20-stellig, beginnt mit 00)
+    r"JJD[A-Z0-9]{15,}", # DHL Express JJD-Format
+    r"\d{10}",           # DHL Express 10-stellig
+    r"\d{12}",           # DHL Express 12-stellig
+]
+
+# ── API-Typen ────────────────────────────────────────────────────────────────
 API_TYPE_UNIFIED   = "unified"
 API_TYPE_PARCEL_DE = "parcel_de"
 
-# Shipment Tracking – Unified (JSON, nur DHL-API-Key Header)
+# Shipment Tracking - Unified
 UNIFIED_API_URL         = "https://api.dhl.com/track/shipments"
 UNIFIED_API_SANDBOX_URL = "https://api-sandbox.dhl.com/track/shipments"
 
-# Parcel DE Tracking – HTTP Basic Auth + API Key, XML im Query-Parameter
-# Authentifizierung: Authorization: Basic base64(api_key:api_secret) + DHL-API-Key Header
+# Parcel DE Tracking - HTTP Basic Auth + XML
 PARCEL_DE_URL         = "https://api-eu.dhl.com/parcel/de/tracking/v0/shipments"
 PARCEL_DE_SANDBOX_URL = "https://api-sandbox.dhl.com/parcel/de/tracking/v0/shipments"
 
-# Sandbox-Testzugangsdaten (offiziell von DHL bereitgestellt)
-# Gehen als Attribute in den XML-Body – KEIN OAuth2!
+# Sandbox-Testdaten (offiziell von DHL)
 SANDBOX_APPNAME  = "zt12345"
 SANDBOX_PASSWORD = "geheim"
 
-# Offizielle DHL Sandbox-Sendungsnummern zum Testen
 SANDBOX_TRACKING_NUMBERS = [
     "00340434161094042557",
     "00340434161094038253",
