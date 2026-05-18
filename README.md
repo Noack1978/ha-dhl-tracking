@@ -22,6 +22,15 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 ---
 
+## Passende Lovelace-Karte
+
+Zur komfortablen Nutzung im Dashboard gibt es eine eigene Karte:
+**[DHL Sendungsverfolgung Karte](https://github.com/Noack1978/ha-dhl-tracking-card)**
+
+Die Karte ermöglicht das Hinzufügen und Entfernen von Sendungen direkt im Dashboard und zeigt Status, Ort und Lieferdatum übersichtlich an. Installation ebenfalls über HACS.
+
+---
+
 ## Voraussetzungen
 
 ### DHL Developer Account & API-Key
