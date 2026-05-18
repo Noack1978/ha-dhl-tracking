@@ -266,3 +266,42 @@ Sobald DHL die Produktiv-API freigeschaltet hat (E-Mail-Benachrichtigung):
 ## Lizenz
 
 MIT – siehe [LICENSE](LICENSE)
+
+---
+
+## E-Mail-Scanner (optional)
+
+Der eingebaute E-Mail-Scanner verbindet sich per IMAP mit deinem Postfach und erkennt DHL-Sendungsnummern automatisch in eingehenden E-Mails.
+
+### Aktivieren
+
+Einstellungen -> Geraete & Dienste -> DHL -> Konfigurieren -> **E-Mail-Scanner**
+
+### Unterstuetzte Anbieter
+
+| Anbieter | Server (automatisch) |
+|---|---|
+| Gmail | imap.gmail.com |
+| GMX | imap.gmx.net |
+| web.de | imap.web.de |
+| T-Online | secureimap.t-online.de |
+| Outlook / Hotmail / Live | outlook.office365.com |
+| Yahoo Mail | imap.mail.yahoo.com |
+| IONOS (1&1) | imap.ionos.de |
+| freenet Mail | mx.freenet.de |
+| Benutzerdefiniert | manuell eingeben |
+
+### Hinweise
+
+- **Gmail**: Normales Google-Passwort funktioniert nicht. App-Passwort erstellen unter: Google-Konto -> Sicherheit -> App-Passwoerter
+- **GMX / web.de**: IMAP muss im Postfach aktiviert sein (Einstellungen -> E-Mail -> IMAP)
+- **T-Online**: Nur mit E-Mail-Adresse (nicht Telekom-Login) und separatem E-Mail-Passwort
+- Der Scanner liest ausschliesslich **ungelesene** E-Mails von DHL-Adressen
+- Erkannte Sendungsnummern werden automatisch als Sensor hinzugefuegt (Label: "E-Mail Import")
+- Standard-Scan-Intervall: 5 Minuten (konfigurierbar)
+
+### Erkannte DHL-Sendungsformate
+
+- 20-stellig beginnend mit `00` (Standard DHL Paket Deutschland)
+- `JJD`-Format (DHL Express)
+- 10- und 12-stellig (DHL Express Kurznummern)
