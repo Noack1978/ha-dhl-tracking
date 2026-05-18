@@ -13,9 +13,9 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import (
-    SelectSelector, SelectSelectorConfig, SelectSelectorMode,
-    TextSelector, TextSelectorConfig, TextSelectorType,
-    NumberSelector, NumberSelectorConfig, NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 
 from .const import (
@@ -105,27 +105,6 @@ async def _validate_api(api_key: str, api_secret: str, api_type: str, sandbox: b
         return "unknown"
 
 
-async def _validate_imap(server: str, port: int, ssl: bool, username: str, password: str) -> str | None:
-    """Testet die IMAP-Verbindung."""
-    import imaplib
-    def _test():
-        try:
-            if ssl:
-                mail = imaplib.IMAP4_SSL(server, port)
-            else:
-                mail = imaplib.IMAP4(server, port)
-            mail.login(username, password)
-            mail.logout()
-            return None
-        except imaplib.IMAP4.error as e:
-            msg = str(e).lower()
-            if "authenticationfailed" in msg or "invalid credentials" in msg:
-                return "imap_invalid_credentials"
-            return "imap_connection_error"
-        except Exception:  # noqa: BLE001
-            return "imap_connection_error"
-
-    import asyncio
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _test)
 
@@ -191,12 +170,18 @@ class DhlTrackingOptionsFlow(OptionsFlow):
         self._labels            = dict(config_entry.options.get(CONF_LABELS, {}))
         self._postal_codes      = dict(config_entry.options.get(CONF_POSTAL_CODES, {}))
         self._update_interval   = config_entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        self._imap_enabled      = config_entry.options.get(CONF_IMAP_ENABLED, False)
-        self._imap_opts         = {k: config_entry.options.get(k) for k in (
-            CONF_IMAP_PROVIDER, CONF_IMAP_SERVER, CONF_IMAP_PORT,
-            CONF_IMAP_SSL, CONF_IMAP_USERNAME, CONF_IMAP_PASSWORD,
-            CONF_IMAP_FOLDER, CONF_IMAP_SCAN_INTERVAL,
-        )}
+        self._imap_enabled = config_entry.options.get(CONF_IMAP_ENABLED, False)
+        opts = config_entry.options
+        self._imap_opts = {
+            CONF_IMAP_PROVIDER:      opts.get(CONF_IMAP_PROVIDER, "gmx"),
+            CONF_IMAP_SERVER:        opts.get(CONF_IMAP_SERVER, ""),
+            CONF_IMAP_PORT:          int(opts.get(CONF_IMAP_PORT, DEFAULT_IMAP_PORT)),
+            CONF_IMAP_SSL:           opts.get(CONF_IMAP_SSL, True),
+            CONF_IMAP_USERNAME:      opts.get(CONF_IMAP_USERNAME, ""),
+            CONF_IMAP_PASSWORD:      opts.get(CONF_IMAP_PASSWORD, ""),
+            CONF_IMAP_FOLDER:        opts.get(CONF_IMAP_FOLDER, DEFAULT_IMAP_FOLDER),
+            CONF_IMAP_SCAN_INTERVAL: int(opts.get(CONF_IMAP_SCAN_INTERVAL, DEFAULT_IMAP_SCAN_INTERVAL)),
+        }
 
     async def async_step_init(self, user_input=None) -> ConfigFlowResult:
         return await self.async_step_menu()
@@ -265,27 +250,28 @@ class DhlTrackingOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             enabled  = user_input.get(CONF_IMAP_ENABLED, False)
-            provider = user_input.get(CONF_IMAP_PROVIDER, "custom")
+            provider = user_input.get(CONF_IMAP_PROVIDER, "gmx")
 
-            # Server automatisch vorbelegen wenn bekannter Provider
-            server = IMAP_PROVIDERS.get(provider, ("", 993))[0]
-            if provider == "custom" or not server:
-                server = user_input.get(CONF_IMAP_SERVER, "")
+            # Server automatisch aus Provider ermitteln; bei custom manuell
+            auto_server, auto_port = IMAP_PROVIDERS.get(provider, ("", DEFAULT_IMAP_PORT))
+            server = auto_server if (auto_server and provider != "custom") \
+                     else user_input.get(CONF_IMAP_SERVER, "")
 
-            port     = int(user_input.get(CONF_IMAP_PORT, DEFAULT_IMAP_PORT))
+            # Port: aus Provider-Preset oder manuell (Coerce gibt int)
+            raw_port = user_input.get(CONF_IMAP_PORT, auto_port or DEFAULT_IMAP_PORT)
+            port = int(float(raw_port)) if raw_port else (auto_port or DEFAULT_IMAP_PORT)
+
             ssl      = user_input.get(CONF_IMAP_SSL, True)
-            username = user_input.get(CONF_IMAP_USERNAME, "")
+            username = user_input.get(CONF_IMAP_USERNAME, "").strip()
             password = user_input.get(CONF_IMAP_PASSWORD, "")
-            folder   = user_input.get(CONF_IMAP_FOLDER, DEFAULT_IMAP_FOLDER)
-            interval = int(user_input.get(CONF_IMAP_SCAN_INTERVAL, DEFAULT_IMAP_SCAN_INTERVAL))
+            folder   = user_input.get(CONF_IMAP_FOLDER, DEFAULT_IMAP_FOLDER) or DEFAULT_IMAP_FOLDER
+            raw_int  = user_input.get(CONF_IMAP_SCAN_INTERVAL, DEFAULT_IMAP_SCAN_INTERVAL)
+            interval = int(float(raw_int)) if raw_int else DEFAULT_IMAP_SCAN_INTERVAL
 
-            if enabled:
-                if not server or not username or not password:
-                    errors["base"] = "imap_missing_fields"
-                else:
-                    error = await _validate_imap(server, port, ssl, username, password)
-                    if error:
-                        errors["base"] = error
+            # Pflichtfelder pruefen – KEINE Verbindungsvalidierung
+            # (schlaegt bei 2FA immer fehl; Fehler werden beim ersten Scan geloggt)
+            if enabled and (not server or not username or not password):
+                errors["base"] = "imap_missing_fields"
 
             if not errors:
                 self._imap_enabled = enabled
@@ -301,34 +287,37 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                 }
                 return self._save()
 
-        current_provider = self._imap_opts.get(CONF_IMAP_PROVIDER, "gmx")
+        cur_provider = self._imap_opts[CONF_IMAP_PROVIDER]
+        cur_port     = self._imap_opts[CONF_IMAP_PORT]
 
         return self.async_show_form(
             step_id="email_scanner",
             data_schema=vol.Schema({
-                vol.Optional(CONF_IMAP_ENABLED, default=self._imap_enabled): bool,
-                vol.Optional(CONF_IMAP_PROVIDER, default=current_provider): SelectSelector(
+                vol.Optional(CONF_IMAP_ENABLED,
+                    default=self._imap_enabled): bool,
+                vol.Optional(CONF_IMAP_PROVIDER,
+                    default=cur_provider): SelectSelector(
                     SelectSelectorConfig(
                         options=IMAP_PROVIDER_OPTIONS,
                         mode=SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(CONF_IMAP_SERVER,
-                    default=self._imap_opts.get(CONF_IMAP_SERVER, "")): str,
+                    default=self._imap_opts[CONF_IMAP_SERVER]): str,
                 vol.Optional(CONF_IMAP_PORT,
-                    default=self._imap_opts.get(CONF_IMAP_PORT, DEFAULT_IMAP_PORT)): vol.Coerce(int),
+                    default=cur_port): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
                 vol.Optional(CONF_IMAP_SSL,
-                    default=self._imap_opts.get(CONF_IMAP_SSL, True)): bool,
+                    default=self._imap_opts[CONF_IMAP_SSL]): bool,
                 vol.Optional(CONF_IMAP_USERNAME,
-                    default=self._imap_opts.get(CONF_IMAP_USERNAME, "")): str,
+                    default=self._imap_opts[CONF_IMAP_USERNAME]): str,
                 vol.Optional(CONF_IMAP_PASSWORD,
-                    default=self._imap_opts.get(CONF_IMAP_PASSWORD, "")): TextSelector(
-                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
-                ),
+                    default=self._imap_opts[CONF_IMAP_PASSWORD]): str,
                 vol.Optional(CONF_IMAP_FOLDER,
-                    default=self._imap_opts.get(CONF_IMAP_FOLDER, DEFAULT_IMAP_FOLDER)): str,
+                    default=self._imap_opts[CONF_IMAP_FOLDER]): str,
                 vol.Optional(CONF_IMAP_SCAN_INTERVAL,
-                    default=self._imap_opts.get(CONF_IMAP_SCAN_INTERVAL, DEFAULT_IMAP_SCAN_INTERVAL)): vol.Coerce(int),
+                    default=self._imap_opts[CONF_IMAP_SCAN_INTERVAL]): vol.All(
+                    vol.Coerce(int), vol.Range(min=60, max=3600)
+                ),
             }),
             errors=errors,
         )

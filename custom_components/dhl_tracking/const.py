@@ -65,12 +65,14 @@ DHL_SENDERS = [
     "@dhl-news.com",
 ]
 
-# Sendungsnummer-Regex-Muster (ohne \b – werden im Scanner kombiniert)
+# Sendungsnummer-Regex-Muster
+# Nur sehr spezifische Formate um Fehlerkennungen zu vermeiden:
+# - 20-stellig beginnend mit 00 (Standard DHL Paket DE, z. B. 00340434161094042557)
+# - JJD + alphanumerisch (DHL Express)
+# NICHT verwendet: \d{10} / \d{12} – zu allgemein, treffen Telefon-/Bestellnummern
 DHL_TRACKING_PATTERNS = [
-    r"00\d{18}",         # Standard DHL Paket DE (20-stellig, beginnt mit 00)
-    r"JJD[A-Z0-9]{15,}", # DHL Express JJD-Format
-    r"\d{10}",           # DHL Express 10-stellig
-    r"\d{12}",           # DHL Express 12-stellig
+    r"00\d{18}",          # Standard DHL Paket DE (20-stellig, beginnt mit 00)
+    r"JJD[A-Z0-9]{15,}",  # DHL Express JJD-Format
 ]
 
 # ── API-Typen ────────────────────────────────────────────────────────────────

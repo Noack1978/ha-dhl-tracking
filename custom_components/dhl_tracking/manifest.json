@@ -11,5 +11,5 @@
   "issue_tracker": "https://github.com/Noack1978/ha-dhl-tracking/issues",
   "loggers": ["custom_components.dhl_tracking"],
   "requirements": [],
-  "version": "1.0.0"
+  "version": "1.1.1"
 }
