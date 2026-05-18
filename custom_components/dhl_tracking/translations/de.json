@@ -64,7 +64,7 @@
       },
       "email_scanner": {
         "title": "E-Mail-Scanner",
-        "description": "Der Scanner verbindet sich per IMAP und erkennt DHL-Sendungsnummern automatisch. Unterstuetzte Anbieter: Gmail, GMX, web.de, T-Online, Outlook, Yahoo, IONOS, freenet. WICHTIG: Bei 2-Faktor-Authentifizierung (2FA) muss ein App-Passwort verwendet werden (kein normales Konto-Passwort). Gmail: Google-Konto -> Sicherheit -> App-Passwoerter. GMX/web.de: IMAP muss im Postfach aktiviert sein (Einstellungen -> E-Mail -> IMAP). Der Server wird automatisch eingetragen - IMAP-Server-Feld nur bei Benutzerdefiniert ausfullen. Die Zugangsdaten werden beim ersten Scan geprueft, nicht sofort.",
+        "description": "Der Scanner verbindet sich per IMAP mit deinem E-Mail-Postfach und erkennt automatisch DHL-Sendungsnummern in eingehenden E-Mails. Unterstuetzte Anbieter: Gmail, GMX, web.de, T-Online, Outlook, Yahoo, IONOS, freenet. Fuer Gmail wird ein App-Passwort benoetigt (kein normales Google-Passwort).",
         "data": {
           "imap_enabled": "E-Mail-Scanner aktivieren",
           "imap_provider": "E-Mail-Anbieter",
@@ -101,7 +101,7 @@
       "invalid_tracking_number": "Sendungsnummer ist zu kurz oder ungueltig",
       "tracking_already_added": "Diese Sendungsnummer wird bereits verfolgt",
       "no_trackings": "Keine Sendungen gespeichert",
-      "imap_missing_fields": "E-Mail-Adresse und Passwort sind Pflichtfelder wenn der Scanner aktiviert ist",
+      "imap_missing_fields": "IMAP-Server, E-Mail-Adresse und Passwort sind Pflichtfelder",
       "imap_invalid_credentials": "Ungueltige IMAP-Zugangsdaten - E-Mail und Passwort pruefen",
       "imap_connection_error": "IMAP-Verbindung fehlgeschlagen - Server und Port pruefen"
     }
