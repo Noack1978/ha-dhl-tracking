@@ -6,6 +6,12 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 
 ---
 
+## Karte für dashboard
+
+https://github.com/Noack1978/ha-dhl-tracking-card
+
+---
+
 ## Features
 
 - ✅ **Parcel DE Tracking** (Post & Parcel Germany) – empfohlen für Deutschland
