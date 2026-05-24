@@ -1,8 +1,6 @@
 # DHL Sendungsverfolgung für Home Assistant
 
-[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
-[![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz) [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Noack1978/ha-dhl-tracking/blob/main/LICENSE)
 
 Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA – mit Sensor-Entitäten, Automationen und Dashboard-Karten.
 
@@ -36,7 +34,7 @@ Offizielle DHL API-Integration für Home Assistant. Verfolge Pakete direkt in HA
 ### Welche API soll ich nehmen?
 
 | API | Freischaltung | Calls/Tag |
-|---|---|---|
+| --- | --- | --- |
 | **Parcel DE Tracking** ✅ | Testing sofort, Produktion auf Anfrage | 1000 |
 | Shipment Tracking – Unified | Manuelle Prüfung durch DHL | 250 |
 
@@ -55,6 +53,8 @@ Die **Parcel DE Tracking API** verwendet **HTTP Basic Auth** – kein OAuth2, ke
 ## Installation
 
 ### Via HACS (empfohlen)
+
+[![In HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Noack1978&repository=ha-dhl-tracking&category=integration)
 
 1. HACS öffnen → **Integrationen** → Menü (⋮) → **Benutzerdefinierte Repositories**
 2. URL eintragen: `https://github.com/Noack1978/ha-dhl-tracking`
@@ -77,7 +77,7 @@ Die **Parcel DE Tracking API** verwendet **HTTP Basic Auth** – kein OAuth2, ke
 3. Felder ausfüllen:
 
 | Feld | Wert |
-|---|---|
+| --- | --- |
 | API-Schlüssel | Consumer Key von developer.dhl.com |
 | API-Secret | Consumer Secret von developer.dhl.com |
 | API-Typ | Parcel DE Tracking (empfohlen) |
@@ -94,7 +94,7 @@ Die **Parcel DE Tracking API** verwendet **HTTP Basic Auth** – kein OAuth2, ke
 Im Sandbox-Modus liefert die DHL API **ausschließlich** Daten für diese offiziell bereitgestellten Testnummern. Eigene/echte Sendungsnummern geben „Nicht gefunden" zurück.
 
 | Sandbox-Testnummer |
-|---|
+| --- |
 | `00340434161094042557` |
 | `00340434161094038253` |
 | `00340434161094032954` |
@@ -110,10 +110,10 @@ Sobald die Produktiv-API freigeschaltet ist (Sandbox deaktivieren), können echt
 
 ## Sendungen hinzufügen
 
-**Option A – UI (Options Flow):**
-Einstellungen → Geräte & Dienste → DHL → Konfigurieren → **Sendung hinzufügen**
+**Option A – UI (Options Flow):** Einstellungen → Geräte & Dienste → DHL → Konfigurieren → **Sendung hinzufügen**
 
 **Option B – Service:**
+
 ```yaml
 service: dhl_tracking.add_tracking
 data:
@@ -129,7 +129,7 @@ data:
 Pro Sendungsnummer wird **ein Sensor** erstellt:
 
 | Attribut | Beschreibung |
-|---|---|
+| --- | --- |
 | **State** | Lesbarer Status (z. B. „In Zustellung") |
 | `tracking_number` | Sendungsnummer |
 | `label` | Bezeichnung |
@@ -143,7 +143,7 @@ Pro Sendungsnummer wird **ein Sensor** erstellt:
 ### Status-Codes
 
 | Code | Bezeichnung | Icon |
-|---|---|---|
+| --- | --- | --- |
 | `pre-transit` | Voranmeldung | 📦 |
 | `transit` | In Transit | 🚚 |
 | `out-for-delivery` | In Zustellung | ⚡ |
@@ -159,7 +159,7 @@ Pro Sendungsnummer wird **ein Sensor** erstellt:
 ### `dhl_tracking.add_tracking`
 
 | Parameter | Pflicht | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | `tracking_number` | ✅ | DHL-Sendungsnummer |
 | `label` | ❌ | Bezeichnung (wird Sensor-Name) |
 | `postal_code` | ❌ | Empfänger-PLZ für Standortdaten |
@@ -168,10 +168,11 @@ Pro Sendungsnummer wird **ein Sensor** erstellt:
 ### `dhl_tracking.remove_tracking`
 
 | Parameter | Pflicht | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | `tracking_number` | ✅ | Zu entfernende Sendungsnummer |
 
 ### `dhl_tracking.refresh`
+
 Erzwingt sofortige Aktualisierung aller Sendungsdaten.
 
 ---
@@ -204,6 +205,7 @@ sections:
 ## Automations-Beispiele
 
 **Benachrichtigung bei Zustellung:**
+
 ```yaml
 automation:
   - alias: "Paket zugestellt"
@@ -220,6 +222,7 @@ automation:
 ```
 
 **Sendung nach Zustellung automatisch entfernen:**
+
 ```yaml
 automation:
   - alias: "Zugestellte Sendung nach 24h entfernen"
@@ -256,4 +259,4 @@ Sobald DHL die Produktiv-API freigeschaltet hat (E-Mail-Benachrichtigung):
 
 ## Lizenz
 
-MIT – siehe [LICENSE](LICENSE)
+MIT – siehe [LICENSE](https://github.com/Noack1978/ha-dhl-tracking/blob/main/LICENSE)
