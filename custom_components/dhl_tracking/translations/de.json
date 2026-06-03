@@ -70,7 +70,7 @@
           "imap_ssl": "SSL/TLS verwenden",
           "imap_username": "E-Mail-Adresse",
           "imap_password": "Passwort / App-Passwort",
-          "imap_folder": "Postfach-Ordner",
+          "imap_folder": "Postfach-Ordner (mehrere kommagetrennt)",
           "imap_scan_interval": "Scan-Intervall (Sekunden)"
         },
         "data_description": {
@@ -81,7 +81,7 @@
           "imap_ssl": "Empfohlen: aktiviert",
           "imap_username": "Deine vollstaendige E-Mail-Adresse",
           "imap_password": "Bei Gmail: App-Passwort aus Google-Konto-Einstellungen",
-          "imap_folder": "Standard: INBOX",
+          "imap_folder": "Einzeln: 'INBOX' oder 'dhl' – Mehrere: 'INBOX, dhl' – Alle Ordner werden nach ungelesenen E-Mails durchsucht",
           "imap_scan_interval": "Wie oft der Posteingang geprueft wird (Standard: 300 = 5 Min)"
         }
       },

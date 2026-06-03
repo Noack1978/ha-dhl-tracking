@@ -269,7 +269,7 @@ class DhlTrackingOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_IMAP_SSL,           default=self._imap_ssl):      bool,
                 vol.Optional(CONF_IMAP_USERNAME,      default=self._imap_username): str,
                 vol.Optional(CONF_IMAP_PASSWORD,      default=self._imap_password): str,
-                vol.Optional(CONF_IMAP_FOLDER,        default=self._imap_folder):   str,
+                vol.Optional(CONF_IMAP_FOLDER,        default=self._imap_folder):   str,  # kommagetrennt
                 vol.Optional(CONF_IMAP_SCAN_INTERVAL, default=self._imap_interval): vol.All(vol.Coerce(int), vol.Range(min=60, max=3600)),
             }),
             errors=errors,

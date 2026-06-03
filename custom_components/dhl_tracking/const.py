@@ -119,3 +119,14 @@ STATUS_ICONS: dict[str, str] = {
 }
 
 DEFAULT_ICON = "mdi:package-variant-closed"
+
+# Carrier-Erkennung
+CONF_CARRIERS = "carriers"
+CARRIER_DHL   = "dhl"
+CARRIER_DPD   = "dpd"
+
+# DPD Website-API (kein API-Key noetig)
+DPD_WEBSITE_API_URL = "https://tracking.dpd.de/rest/plc/de_DE"
+
+# DPD URL-Muster in E-Mails von Haendlern
+DPD_URL_PATTERN = r"tracking\.dpd\.de/[^\s]*?/parcel/([A-Z0-9]{8,20})"
