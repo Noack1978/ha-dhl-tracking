@@ -1,0 +1,99 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "DHL Sendungsverfolgung einrichten",
+        "description": "Zugangsdaten vom DHL Developer Portal eingeben (developer.dhl.com). Im Produktivbetrieb mit 'Parcel DE Tracking' wird die DHL-Website-API verwendet - keine speziellen Credentials benoetigt. API-Key und Secret sind fuer den Sandbox-Modus und die Unified API erforderlich.",
+        "data": {
+          "api_key": "API-Schluessel (Consumer Key)",
+          "api_secret": "API-Secret (Consumer Secret, optional fuer Produktion)",
+          "api_type": "API-Typ",
+          "sandbox": "Sandbox-Modus (nur fuer Entwickler / Tests)"
+        },
+        "data_description": {
+          "api_key": "Zu finden unter: developer.dhl.com -> Deine App -> Berechtigung -> Consumer Key",
+          "api_secret": "Nur benoetigt fuer Sandbox-Modus. Zu finden unter: Berechtigung -> Consumer Secret",
+          "api_type": "Parcel DE Tracking empfohlen - funktioniert ohne spezielle Zugangsdaten",
+          "sandbox": "Aktivieren um DHL-Testnummern zu verwenden. Erfordert API-Key und Secret."
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Ungueltige API-Zugangsdaten - Consumer Key pruefen",
+      "cannot_connect": "Verbindung fehlgeschlagen - Internetverbindung pruefen",
+      "unknown": "Unbekannter Fehler - siehe Log"
+    },
+    "abort": {
+      "already_configured": "DHL Sendungsverfolgung ist bereits konfiguriert"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "DHL Sendungsverfolgung",
+        "menu_options": {
+          "add_tracking": "Sendung hinzufuegen",
+          "manage_trackings": "Sendungen verwalten / entfernen",
+          "email_scanner": "E-Mail-Scanner (automatisch)",
+          "settings": "Einstellungen"
+        }
+      },
+      "add_tracking": {
+        "title": "Sendung hinzufuegen",
+        "data": {
+          "tracking_number": "Sendungsnummer",
+          "label": "Bezeichnung (optional)",
+          "postal_code": "Postleitzahl Empfaenger (optional)"
+        },
+        "data_description": {
+          "tracking_number": "Vollstaendige DHL-Sendungsnummer ohne Leerzeichen",
+          "label": "z. B. 'Amazon Mai' - wird als Sensor-Name verwendet",
+          "postal_code": "Fuer vollstaendige Standortdaten"
+        }
+      },
+      "manage_trackings": {
+        "title": "Sendungen verwalten",
+        "description": "Sendungen auswaehlen, die entfernt werden sollen.",
+        "data": { "remove": "Zu entfernende Sendungen" }
+      },
+      "email_scanner": {
+        "title": "E-Mail-Scanner",
+        "description": "Der Scanner verbindet sich per IMAP und erkennt DHL-Sendungsnummern in eingehenden E-Mails automatisch. Hinweis: Bei aktiviertem 2FA ein App-Passwort verwenden. Gmail: Google-Konto -> Sicherheit -> App-Passwoerter.",
+        "data": {
+          "imap_enabled": "E-Mail-Scanner aktivieren",
+          "imap_provider": "E-Mail-Anbieter",
+          "imap_server": "IMAP-Server (nur bei 'Benutzerdefiniert')",
+          "imap_port": "IMAP-Port",
+          "imap_ssl": "SSL/TLS verwenden",
+          "imap_username": "E-Mail-Adresse",
+          "imap_password": "Passwort / App-Passwort",
+          "imap_folder": "Postfach-Ordner",
+          "imap_scan_interval": "Scan-Intervall (Sekunden)"
+        },
+        "data_description": {
+          "imap_enabled": "Aktiviert den automatischen E-Mail-Scan",
+          "imap_provider": "Anbieter waehlen - Server wird automatisch eingetragen",
+          "imap_server": "Nur bei 'Benutzerdefiniert' notwendig",
+          "imap_port": "Standard: 993 (SSL)",
+          "imap_ssl": "Empfohlen: aktiviert",
+          "imap_username": "Deine vollstaendige E-Mail-Adresse",
+          "imap_password": "Bei Gmail: App-Passwort aus Google-Konto-Einstellungen",
+          "imap_folder": "Standard: INBOX",
+          "imap_scan_interval": "Wie oft der Posteingang geprueft wird (Standard: 300 = 5 Min)"
+        }
+      },
+      "settings": {
+        "title": "Einstellungen",
+        "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min).",
+        "data": { "update_interval": "Aktualisierungsintervall (Sekunden)" }
+      }
+    },
+    "error": {
+      "interval_too_low": "Mindestintervall ist 600 Sekunden",
+      "invalid_tracking_number": "Sendungsnummer ist zu kurz oder ungueltig",
+      "tracking_already_added": "Diese Sendungsnummer wird bereits verfolgt",
+      "no_trackings": "Keine Sendungen gespeichert",
+      "imap_missing_fields": "E-Mail-Adresse und Passwort sind Pflichtfelder"
+    }
+  }
+}

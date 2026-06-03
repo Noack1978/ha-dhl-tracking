@@ -1,0 +1,99 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up DHL Shipment Tracking",
+        "description": "Enter credentials from the DHL Developer Portal (developer.dhl.com). In production with 'Parcel DE Tracking', the DHL website API is used - no special credentials required. API key and secret are needed for sandbox mode and the Unified API.",
+        "data": {
+          "api_key": "API Key (Consumer Key)",
+          "api_secret": "API Secret (Consumer Secret, optional for production)",
+          "api_type": "API Type",
+          "sandbox": "Sandbox mode (developers / testing only)"
+        },
+        "data_description": {
+          "api_key": "Found at: developer.dhl.com -> Your App -> Authorization -> Consumer Key",
+          "api_secret": "Only required for sandbox mode. Found at: Authorization -> Consumer Secret",
+          "api_type": "Parcel DE Tracking recommended - works without special credentials",
+          "sandbox": "Enable to use DHL test tracking numbers. Requires API key and secret."
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Invalid API credentials - check Consumer Key",
+      "cannot_connect": "Connection failed - check internet connection",
+      "unknown": "Unknown error - check logs"
+    },
+    "abort": {
+      "already_configured": "DHL Shipment Tracking is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "menu": {
+        "title": "DHL Shipment Tracking",
+        "menu_options": {
+          "add_tracking": "Add shipment",
+          "manage_trackings": "Manage / remove shipments",
+          "email_scanner": "Email scanner (automatic)",
+          "settings": "Settings"
+        }
+      },
+      "add_tracking": {
+        "title": "Add shipment",
+        "data": {
+          "tracking_number": "Tracking number",
+          "label": "Label (optional)",
+          "postal_code": "Recipient postal code (optional)"
+        },
+        "data_description": {
+          "tracking_number": "Full DHL tracking number without spaces",
+          "label": "e.g. 'Amazon May' - used as sensor name",
+          "postal_code": "For complete location data"
+        }
+      },
+      "manage_trackings": {
+        "title": "Manage shipments",
+        "description": "Select shipments to remove.",
+        "data": { "remove": "Shipments to remove" }
+      },
+      "email_scanner": {
+        "title": "Email Scanner",
+        "description": "The scanner connects via IMAP and automatically detects DHL tracking numbers in incoming emails. Note: Use an app password if 2FA is enabled. Gmail: Google Account -> Security -> App Passwords.",
+        "data": {
+          "imap_enabled": "Enable email scanner",
+          "imap_provider": "Email provider",
+          "imap_server": "IMAP server (Custom only)",
+          "imap_port": "IMAP port",
+          "imap_ssl": "Use SSL/TLS",
+          "imap_username": "Email address",
+          "imap_password": "Password / App password",
+          "imap_folder": "Mailbox folder",
+          "imap_scan_interval": "Scan interval (seconds)"
+        },
+        "data_description": {
+          "imap_enabled": "Enables automatic email scanning",
+          "imap_provider": "Select provider - server is filled in automatically",
+          "imap_server": "Only needed for 'Custom'",
+          "imap_port": "Default: 993 (SSL)",
+          "imap_ssl": "Recommended: enabled",
+          "imap_username": "Your full email address",
+          "imap_password": "For Gmail: app password from Google account settings",
+          "imap_folder": "Default: INBOX",
+          "imap_scan_interval": "How often inbox is checked (default: 300 = 5 min)"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Update interval in seconds. Minimum: 600 s (10 min).",
+        "data": { "update_interval": "Update interval (seconds)" }
+      }
+    },
+    "error": {
+      "interval_too_low": "Minimum interval is 600 seconds",
+      "invalid_tracking_number": "Tracking number is too short or invalid",
+      "tracking_already_added": "This tracking number is already being tracked",
+      "no_trackings": "No shipments saved",
+      "imap_missing_fields": "Email address and password are required"
+    }
+  }
+}
