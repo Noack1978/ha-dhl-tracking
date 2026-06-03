@@ -285,21 +285,33 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @staticmethod
     def _status_code(text: str) -> str:
+        # Nur eindeutige Zustellungs-Meldungen als "delivered" werten
+        # "Neue Zustellanschrift: Packstation" ist KEINE Zustellung
         if any(x in text for x in (
-            "zugestellt", "delivered", "abgeliefert",
-            "packstation", "abholstation", "paketshop",
-            "zur abholung bereit", "ready for pickup",
+            "zugestellt",
+            "delivered",
+            "abgeliefert",
+            "zur abholung bereit",
+            "liegt in der packstation",
+            "liegt im paketshop",
+            "liegt in der abholstation",
+            "im paketshop hinterlegt",
+            "ready for pickup",
         )):
             return "delivered"
         if any(x in text for x in (
-            "in zustellung", "in delivery", "wird zugestellt",
-            "zustellfahrzeug", "auf dem weg zur packstation",
+            "in zustellung",
+            "in delivery",
+            "wird zugestellt",
+            "zustellfahrzeug",
+            "auf dem weg zur packstation",
+            "wird in die packstation",
         )):
             return "out-for-delivery"
         if any(x in text for x in (
             "transit", "unterwegs", "region", "angekommen",
             "weitergeleitet", "sortiert", "depot", "hub",
-            "zustellbasis", "bearbeitet",
+            "zustellbasis", "bearbeitet", "packstation",
         )):
             return "transit"
         return "transit"
