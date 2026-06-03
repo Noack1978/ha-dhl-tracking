@@ -199,9 +199,12 @@ class DhlShipmentSensor(CoordinatorEntity[DhlTrackingCoordinator], SensorEntity)
     @staticmethod
     def _error_state(error_code: str) -> str:
         mapping = {
-            "rate_limit":   "API-Limit erreicht",
-            "http_401":     "Ungültiger API-Key",
-            "http_403":     "Zugriff verweigert",
-            "http_500":     "DHL Server-Fehler",
+            "rate_limit":          "API-Limit erreicht",
+            "http_401":            "Ungültiger API-Key",
+            "http_403":            "Zugriff verweigert",
+            "http_500":            "DHL Server-Fehler",
+            "format_not_supported":"Format nicht unterstuetzt (JJD/Express)",
+            "token_expired":       "Token abgelaufen",
+            "parse_error":         "XML-Fehler",
         }
         return mapping.get(error_code, f"Fehler ({error_code})")

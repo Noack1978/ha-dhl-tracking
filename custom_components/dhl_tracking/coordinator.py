@@ -55,8 +55,11 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._xml_appname  = SANDBOX_APPNAME
             self._xml_password = SANDBOX_PASSWORD
         else:
-            self._xml_appname  = gkp_user
-            self._xml_password = gkp_password
+            # Fuer den oeffentlichen Query (get-status-for-public-user) immer
+            # die Standard-Credentials verwenden – echte GKP-Credentials sind
+            # nur fuer den Geschaeftskunden-Query (d-get-piece-detail) relevant
+            self._xml_appname  = SANDBOX_APPNAME
+            self._xml_password = SANDBOX_PASSWORD
 
         if api_type == API_TYPE_PARCEL_DE:
             self._tracking_url = PARCEL_DE_SANDBOX_URL if sandbox else PARCEL_DE_URL
@@ -125,7 +128,7 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "Authorization": self._build_basic_auth(),
             "Accept":        "application/xml,text/xml,*/*",
         }
-        _LOGGER.debug("Parcel DE Request: %s", xml_body)
+        _LOGGER.debug("Parcel DE Request: %s", xml_body.replace(self._xml_password, "***"))
         try:
             async with session.get(
                 url, headers=headers,
@@ -166,6 +169,18 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         def find_first(node: ET.Element, tag: str) -> ET.Element | None:
             r = find_all(node, tag)
             return r[0] if r else None
+
+        # ── Fehlercheck: root-Attribut code=-3 (Abfrage unbekannt) ───────────
+        # Tritt auf bei JJD/Express-Nummern die die Parcel DE API nicht kennt
+        root_code = root.get("code", "")
+        root_error = root.get("error", "")
+        if root_code == "-3" or "unbekannt" in root_error.lower():
+            _LOGGER.warning(
+                "Parcel DE API: '%s' (code %s) fuer %s. "
+                "JJD/Express-Nummern benoetigen die Shipment Tracking Unified API.",
+                root_error, root_code, tracking_number,
+            )
+            return {"_error": "format_not_supported"}
 
         # ── Fehlercheck ───────────────────────────────────────────────────────
         for err_tag in ("error", "Error", "Fault"):
