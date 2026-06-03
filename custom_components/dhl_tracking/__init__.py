@@ -1,4 +1,4 @@
-"""DHL / DPD Sendungsverfolgung - Home Assistant Custom Integration."""
+"""DHL Sendungsverfolgung - Home Assistant Custom Integration."""
 from __future__ import annotations
 import logging
 import voluptuous as vol
@@ -12,7 +12,6 @@ from .const import (
     CONF_API_KEY,
     CONF_API_SECRET,
     CONF_API_TYPE,
-    CONF_CARRIERS,
     CONF_IMAP_ENABLED,
     CONF_LABELS,
     CONF_POSTAL_CODES,
@@ -23,7 +22,7 @@ from .const import (
     DOMAIN,
     PLATFORMS,
 )
-from .coordinator import DhlTrackingCoordinator, detect_carrier
+from .coordinator import DhlTrackingCoordinator
 from .imap_scanner import DhlImapScanner
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,7 +38,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         api_type=entry.data.get(CONF_API_TYPE, API_TYPE_PARCEL_DE),
         tracking_numbers=entry.options.get(CONF_TRACKING_NUMBERS, []),
         postal_codes=entry.options.get(CONF_POSTAL_CODES, {}),
-        carriers=entry.options.get(CONF_CARRIERS, {}),
         scan_interval=entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL),
         sandbox=entry.data.get(CONF_SANDBOX, False),
     )
@@ -94,31 +92,26 @@ def _async_register_services(hass: HomeAssistant) -> None:
         entry = _get_entry(call.data.get("entry_id"))
         if not entry:
             return
-        number   = call.data["tracking_number"].strip().replace(" ", "").upper()
-        label    = call.data.get("label", "").strip()
-        plz      = call.data.get("postal_code", "").strip()
-        # Carrier: explizit angegeben oder auto-erkannt
-        carrier  = call.data.get("carrier", "") or detect_carrier(number)
+        number  = call.data["tracking_number"].strip().replace(" ", "").upper()
+        label   = call.data.get("label", "").strip()
+        plz     = call.data.get("postal_code", "").strip()
 
-        numbers  = list(entry.options.get(CONF_TRACKING_NUMBERS, []))
-        labels   = dict(entry.options.get(CONF_LABELS, {}))
-        postal   = dict(entry.options.get(CONF_POSTAL_CODES, {}))
-        carriers = dict(entry.options.get(CONF_CARRIERS, {}))
+        numbers = list(entry.options.get(CONF_TRACKING_NUMBERS, []))
+        labels  = dict(entry.options.get(CONF_LABELS, {}))
+        postal  = dict(entry.options.get(CONF_POSTAL_CODES, {}))
 
         if number in numbers:
             _LOGGER.debug("Sendung %s wird bereits verfolgt.", number)
             return
         numbers.append(number)
-        if label:   labels[number]   = label
-        if plz:     postal[number]   = plz
-        carriers[number] = carrier
+        if label: labels[number] = label
+        if plz:   postal[number] = plz
 
         hass.config_entries.async_update_entry(entry, options={
             **entry.options,
             CONF_TRACKING_NUMBERS: numbers,
             CONF_LABELS:           labels,
             CONF_POSTAL_CODES:     postal,
-            CONF_CARRIERS:         carriers,
         })
         await hass.config_entries.async_reload(entry.entry_id)
 
@@ -137,7 +130,6 @@ def _async_register_services(hass: HomeAssistant) -> None:
             CONF_TRACKING_NUMBERS: [n for n in entry.options.get(CONF_TRACKING_NUMBERS, []) if n != number],
             CONF_LABELS:    {k: v for k, v in entry.options.get(CONF_LABELS, {}).items() if k != number},
             CONF_POSTAL_CODES: {k: v for k, v in entry.options.get(CONF_POSTAL_CODES, {}).items() if k != number},
-            CONF_CARRIERS:  {k: v for k, v in entry.options.get(CONF_CARRIERS, {}).items() if k != number},
         })
         await hass.config_entries.async_reload(entry.entry_id)
 
@@ -154,7 +146,6 @@ def _async_register_services(hass: HomeAssistant) -> None:
             vol.Required("tracking_number"): cv.string,
             vol.Optional("label",       default=""): cv.string,
             vol.Optional("postal_code", default=""): cv.string,
-            vol.Optional("carrier",     default=""): cv.string,
             vol.Optional("entry_id"):   cv.string,
         }))
     hass.services.async_register(DOMAIN, "remove_tracking", handle_remove_tracking,
