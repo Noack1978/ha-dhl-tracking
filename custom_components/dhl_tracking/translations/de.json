@@ -3,16 +3,16 @@
     "step": {
       "user": {
         "title": "DHL Sendungsverfolgung einrichten",
-        "description": "Zugangsdaten vom DHL Developer Portal eingeben (developer.dhl.com). Im Produktivbetrieb mit 'Parcel DE Tracking' wird die DHL-Website-API verwendet - keine speziellen Credentials benoetigt. API-Key und Secret sind fuer den Sandbox-Modus und die Unified API erforderlich.",
+        "description": "Fuer den normalen Betrieb mit 'Parcel DE Tracking' sind keine Zugangsdaten erforderlich - einfach leer lassen und speichern. API-Key und Secret werden nur benoetigt fuer: Sandbox-Modus oder Shipment Tracking Unified API.",
         "data": {
-          "api_key": "API-Schluessel (Consumer Key)",
-          "api_secret": "API-Secret (Consumer Secret, optional fuer Produktion)",
+          "api_key": "API-Schluessel (nur fuer Sandbox / Unified API)",
+          "api_secret": "API-Secret (nur fuer Sandbox / Unified API)",
           "api_type": "API-Typ",
           "sandbox": "Sandbox-Modus (nur fuer Entwickler / Tests)"
         },
         "data_description": {
-          "api_key": "Zu finden unter: developer.dhl.com -> Deine App -> Berechtigung -> Consumer Key",
-          "api_secret": "Nur benoetigt fuer Sandbox-Modus. Zu finden unter: Berechtigung -> Consumer Secret",
+          "api_key": "Fuer normalen Betrieb leer lassen. Nur benoetigt fuer Sandbox oder Unified API.",
+          "api_secret": "Fuer normalen Betrieb leer lassen. Nur benoetigt fuer Sandbox oder Unified API.",
           "api_type": "Parcel DE Tracking empfohlen - funktioniert ohne spezielle Zugangsdaten",
           "sandbox": "Aktivieren um DHL-Testnummern zu verwenden. Erfordert API-Key und Secret."
         }
@@ -21,7 +21,8 @@
     "error": {
       "invalid_api_key": "Ungueltige API-Zugangsdaten - Consumer Key pruefen",
       "cannot_connect": "Verbindung fehlgeschlagen - Internetverbindung pruefen",
-      "unknown": "Unbekannter Fehler - siehe Log"
+      "unknown": "Unbekannter Fehler - siehe Log",
+      "api_key_required": "API-Schluessel ist erforderlich fuer Sandbox-Modus und Unified API"
     },
     "abort": {
       "already_configured": "DHL Sendungsverfolgung ist bereits konfiguriert"
@@ -54,7 +55,9 @@
       "manage_trackings": {
         "title": "Sendungen verwalten",
         "description": "Sendungen auswaehlen, die entfernt werden sollen.",
-        "data": { "remove": "Zu entfernende Sendungen" }
+        "data": {
+          "remove": "Zu entfernende Sendungen"
+        }
       },
       "email_scanner": {
         "title": "E-Mail-Scanner",
@@ -85,7 +88,9 @@
       "settings": {
         "title": "Einstellungen",
         "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min).",
-        "data": { "update_interval": "Aktualisierungsintervall (Sekunden)" }
+        "data": {
+          "update_interval": "Aktualisierungsintervall (Sekunden)"
+        }
       }
     },
     "error": {

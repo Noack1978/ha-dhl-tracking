@@ -64,31 +64,32 @@ IMAP_PROVIDER_OPTIONS = [
 
 
 async def _validate_credentials(api_key: str, api_secret: str, api_type: str, sandbox: bool) -> str | None:
+    """Validierung – nur wenn Sandbox oder Unified API aktiv."""
+    # Parcel DE Produktion: Website-API, keine Credentials noetig
+    if api_type == API_TYPE_PARCEL_DE and not sandbox:
+        return None
+
+    # Sandbox oder Unified API: API-Key ist Pflicht
+    if not api_key.strip():
+        return "api_key_required"
+
     try:
         async with aiohttp.ClientSession() as session:
-            if api_type == API_TYPE_PARCEL_DE:
-                if sandbox:
-                    # Sandbox: DASS-XML-API testen
-                    xml_body = (
-                        '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
-                        f'<data appname="{SANDBOX_APPNAME}" language-code="de" '
-                        f'password="{SANDBOX_PASSWORD}" piece-code="{SANDBOX_TRACKING_NUMBERS[0]}" '
-                        'request="d-get-piece-detail"/>'
-                    )
-                    url  = f"{PARCEL_DE_SANDBOX_URL}?xml={urllib.parse.quote(xml_body)}"
-                    auth = base64.b64encode(f"{api_key}:{api_secret}".encode()).decode()
-                    async with session.get(url,
-                        headers={"DHL-API-Key": api_key, "Authorization": f"Basic {auth}",
-                                 "Accept": "application/xml,text/xml,*/*"},
-                        timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
-                    ) as resp:
-                        return "invalid_api_key" if resp.status == 401 else None
-                else:
-                    # Produktion: Website-API braucht keine Credentials
-                    # Nur pruefen ob der Key nicht komplett leer ist
-                    if not api_key.strip():
-                        return "invalid_api_key"
-                    return None
+            if api_type == API_TYPE_PARCEL_DE and sandbox:
+                xml_body = (
+                    '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'
+                    f'<data appname="{SANDBOX_APPNAME}" language-code="de" '
+                    f'password="{SANDBOX_PASSWORD}" piece-code="{SANDBOX_TRACKING_NUMBERS[0]}" '
+                    'request="d-get-piece-detail"/>'
+                )
+                url  = f"{PARCEL_DE_SANDBOX_URL}?xml={urllib.parse.quote(xml_body)}"
+                auth = base64.b64encode(f"{api_key}:{api_secret}".encode()).decode()
+                async with session.get(url,
+                    headers={"DHL-API-Key": api_key, "Authorization": f"Basic {auth}",
+                             "Accept": "application/xml,text/xml,*/*"},
+                    timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
+                ) as resp:
+                    return "invalid_api_key" if resp.status == 401 else None
             else:
                 url = f"{UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL}?trackingNumber=test"
                 async with session.get(url,
@@ -138,7 +139,7 @@ class DhlTrackingConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_API_KEY): str,
+                vol.Optional(CONF_API_KEY, default=""): str,
                 vol.Optional(CONF_API_SECRET, default=""): str,
                 vol.Required(CONF_API_TYPE, default=API_TYPE_PARCEL_DE): SelectSelector(
                     SelectSelectorConfig(options=API_TYPE_OPTIONS, mode=SelectSelectorMode.LIST)
