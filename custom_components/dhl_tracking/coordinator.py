@@ -296,6 +296,8 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "liegt im paketshop",
             "liegt in der abholstation",
             "im paketshop hinterlegt",
+            "abholung aus packstation",
+            "aus packstation abgeholt",
             "ready for pickup",
         )):
             return "delivered"
