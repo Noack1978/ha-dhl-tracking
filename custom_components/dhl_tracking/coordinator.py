@@ -51,8 +51,6 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.tracking_numbers = tracking_numbers
         self.postal_codes     = postal_codes
 
-        # Im Sandbox-Modus: offizielle DHL-Testdaten (gehen in XML, kein OAuth2)
-        # Im Produktivbetrieb: GKP-Zugangsdaten des Benutzers
         if sandbox:
             self._xml_appname  = SANDBOX_APPNAME
             self._xml_password = SANDBOX_PASSWORD
@@ -75,7 +73,6 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         if not self.tracking_numbers:
             return {}
-
         data: dict[str, Any] = {}
         async with aiohttp.ClientSession() as session:
             for number in self.tracking_numbers:
@@ -92,31 +89,17 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     data[number] = {"_error": str(err)}
         return data
 
-    # ── Parcel DE Tracking ────────────────────────────────────────────────────
-    # Auth: HTTP Basic Auth (base64(api_key:api_secret)) + DHL-API-Key Header
-    # Zugangsdaten gehen als Attribute in den XML-Body – KEIN OAuth2!
+    # ── Parcel DE Tracking (XML + HTTP Basic Auth) ────────────────────────────
 
     def _build_basic_auth(self) -> str:
-        """Erstellt den Authorization: Basic Header-Wert."""
         token = base64.b64encode(
             f"{self.api_key}:{self.api_secret}".encode()
         ).decode()
         return f"Basic {token}"
 
-    def _build_parcel_de_xml(
-        self, tracking_number: str, postal_code: str = ""
-    ) -> str:
-        """Baut den XML-Body für die Parcel DE Tracking API.
-
-        Im Sandbox-Modus: request='d-get-piece-detail' (public-user geht im Test nicht).
-        Im Produktivbetrieb: request='get-status-for-public-user'.
-        """
-        request_type = (
-            "d-get-piece-detail"
-            if self.sandbox
-            else "get-status-for-public-user"
-        )
-
+    def _build_parcel_de_xml(self, tracking_number: str, postal_code: str = "") -> str:
+        # Sandbox: d-get-piece-detail  |  Produktion: get-status-for-public-user
+        request_type = "d-get-piece-detail" if self.sandbox else "get-status-for-public-user"
         attrs = {
             "appname":       self._xml_appname,
             "language-code": "de",
@@ -126,7 +109,6 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
         if postal_code:
             attrs["zip-code"] = postal_code
-
         attr_str = " ".join(f'{k}="{v}"' for k, v in attrs.items())
         return f'<?xml version="1.0" encoding="UTF-8" standalone="no"?><data {attr_str}/>'
 
@@ -136,41 +118,29 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         tracking_number: str,
         postal_code: str = "",
     ) -> dict[str, Any]:
-        """Parcel DE Tracking – XML-Request, HTTP Basic Auth."""
         xml_body = self._build_parcel_de_xml(tracking_number, postal_code)
         url = f"{self._tracking_url}?xml={urllib.parse.quote(xml_body)}"
-
         headers = {
             "DHL-API-Key":   self.api_key,
             "Authorization": self._build_basic_auth(),
             "Accept":        "application/xml,text/xml,*/*",
         }
-
-        _LOGGER.debug("Parcel DE Tracking URL: %s", url[:150])
-        _LOGGER.debug("Parcel DE XML: %s", xml_body)
-
+        _LOGGER.debug("Parcel DE Request: %s", xml_body)
         try:
             async with session.get(
                 url, headers=headers,
                 timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
             ) as resp:
-                _LOGGER.debug("Parcel DE Antwort: HTTP %s", resp.status)
-                content = await resp.text()
-                _LOGGER.debug("Parcel DE Inhalt: %s", content[:500])
-
+                _LOGGER.debug("Parcel DE HTTP: %s", resp.status)
                 if resp.status == 401:
-                    raise UpdateFailed(
-                        "HTTP 401 – API-Schlüssel oder Secret ungültig."
-                    )
+                    raise UpdateFailed("HTTP 401 - API-Key oder Secret ungueltig.")
                 if resp.status == 404:
-                    return {
-                        "status": {"status": "not-found",
-                                   "description": "Sendung nicht gefunden"},
-                        "events": [],
-                    }
+                    return {"status": {"status": "not-found",
+                                       "description": "Sendung nicht gefunden"}, "events": []}
                 if resp.status != 200:
                     return {"_error": f"http_{resp.status}"}
-
+                content = await resp.text()
+                _LOGGER.debug("Parcel DE XML-Antwort: %s", content[:800])
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Verbindungsfehler: {err}") from err
 
@@ -179,14 +149,15 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _parse_parcel_de_xml(
         self, xml_content: str, tracking_number: str
     ) -> dict[str, Any]:
-        """Parst die DASS-XML-Antwort der Parcel DE Tracking API."""
+        """Parst DHL XML-Antwort – unterstuetzt beide API-Formate:
+        - get-status-for-public-user: <data name="..." status-code="INTRAN"><data-set .../></data>
+        - d-get-piece-detail:         <piece-status>, <piece-event> Elemente
+        """
         try:
             root = ET.fromstring(xml_content)
         except ET.ParseError as err:
-            _LOGGER.error(
-                "XML-Parsing fehlgeschlagen für %s: %s | Inhalt: %s",
-                tracking_number, err, xml_content[:300],
-            )
+            _LOGGER.error("XML-Parsing fehlgeschlagen fuer %s: %s | %s",
+                          tracking_number, err, xml_content[:300])
             return {"_error": "parse_error"}
 
         def find_all(node: ET.Element, tag: str) -> list[ET.Element]:
@@ -196,88 +167,126 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             r = find_all(node, tag)
             return r[0] if r else None
 
-        # Fehlercheck
-        for error_tag in ("error", "Error", "Fault"):
-            err_el = find_first(root, error_tag)
+        # ── Fehlercheck ───────────────────────────────────────────────────────
+        for err_tag in ("error", "Error", "Fault"):
+            err_el = find_first(root, err_tag)
             if err_el is not None:
-                msg = (
-                    err_el.get("message")
-                    or err_el.findtext("message")
-                    or err_el.text
-                    or "Unbekannter Fehler"
-                )
-                _LOGGER.warning("DHL Parcel DE Fehler für %s: %s", tracking_number, msg)
-                if any(x in msg.lower() for x in ["not found", "nicht gefunden", "unknown"]):
-                    return {
-                        "status": {"status": "not-found",
-                                   "description": "Sendung nicht gefunden"},
-                        "events": [],
-                    }
+                msg = err_el.get("message") or err_el.text or "Unbekannter Fehler"
+                _LOGGER.warning("DHL Fehler fuer %s: %s", tracking_number, msg)
+                if "not found" in msg.lower() or "nicht gefunden" in msg.lower():
+                    return {"status": {"status": "not-found",
+                                       "description": "Sendung nicht gefunden"}, "events": []}
                 return {"_error": msg[:100]}
 
-        # Gesamtstatus aus piece-status / piece-status-desc
+        # ── Format 1: get-status-for-public-user ─────────────────────────────
+        # Aeusseres <data> enthaelt Status-Attribute, innere <data-set> sind Events
+        data_el = None
+        for el in find_all(root, "data") + [root]:
+            if el.get("status-code") or el.get("status") or el.get("name"):
+                data_el = el
+                break
+
+        status_code_raw = ""
+        status_desc     = ""
+        etd_raw         = ""
+        status_ts       = ""
+        dest_country    = ""
+
+        if data_el is not None:
+            status_code_raw = data_el.get("status-code", "")
+            status_desc     = data_el.get("status-description", "")
+            etd_raw         = (data_el.get("estimated-time-of-delivery", "") or
+                               data_el.get("eta", ""))
+            status_ts       = data_el.get("status-timestamp", "")
+            dest_country    = data_el.get("dest-country", "")
+
+        # ── Format 2: d-get-piece-detail ─────────────────────────────────────
+        # <piece-status> und <piece-status-desc> Textelemente
         piece_status      = root.findtext(".//piece-status", "")
         piece_status_desc = root.findtext(".//piece-status-desc", "")
+        if not status_code_raw:
+            status_code_raw = piece_status
+        if not status_desc:
+            status_desc = piece_status_desc
 
-        # Ereignisse aus piece-event Elementen
+        # ── Events sammeln ────────────────────────────────────────────────────
         events: list[dict[str, Any]] = []
-        for evt in find_all(root, "piece-event"):
+
+        # Format 1: <data-set> Attribute
+        search_root = data_el if data_el is not None else root
+        for evt in find_all(search_root, "data-set"):
+            a = evt.attrib
             entry: dict[str, Any] = {
-                "description": evt.findtext("event-status", ""),
-                "location":    evt.findtext("event-location", ""),
-                "rule_id":     evt.findtext("ruleId", ""),
+                "description": (a.get("event-status") or
+                                a.get("event-short-status") or ""),
+                "location":    a.get("event-location", ""),
             }
-            ts = evt.findtext("event-timestamp", "")
+            ts = a.get("event-timestamp", "")
             if ts:
                 entry["timestamp"] = ts.replace(" ", "T")
-            events.append(entry)
-
-        # Fallback: data-set Elemente (älteres Format)
-        if not events:
-            for evt in find_all(root, "data-set"):
-                a = evt.attrib
-                entry = {
-                    "description": a.get("event-status", ""),
-                    "location":    a.get("event-location", ""),
-                }
-                ts = a.get("event-timestamp", "")
-                if ts:
-                    entry["timestamp"] = ts.replace(" ", "T")
+            if entry["description"] or ts:
                 events.append(entry)
 
-        # Status aus piece-status ableiten
-        raw = (piece_status_desc or (events[0].get("description", "") if events else "")).lower()
-        rule = piece_status.upper() if piece_status else ""
+        # Format 2: <piece-event> Kindelemente
+        if not events:
+            for evt in find_all(root, "piece-event"):
+                entry = {
+                    "description": evt.findtext("event-status", ""),
+                    "location":    evt.findtext("event-location", ""),
+                }
+                ts = evt.findtext("event-timestamp", "")
+                if ts:
+                    entry["timestamp"] = ts.replace(" ", "T")
+                if entry["description"] or ts:
+                    events.append(entry)
 
-        if rule in ("DLVRD", "DLVRD-NG") or "zugestellt" in raw or "delivered" in raw:
+        _LOGGER.debug(
+            "Parcel DE geparst: %d Events, status_code=%r, desc=%r, etd=%r",
+            len(events), status_code_raw, status_desc[:60] if status_desc else "",
+            etd_raw,
+        )
+
+        # ── Status-Code ableiten ──────────────────────────────────────────────
+        first = events[0] if events else {}
+        raw   = (status_desc or first.get("description", "") or status_code_raw).lower()
+        rule  = status_code_raw.upper()
+
+        if rule in ("DLVRD", "DLVRD-NG") or any(x in raw for x in ("zugestellt", "delivered")):
             code = "delivered"
-        elif rule == "LDTCA" or "zustellung" in raw or "in delivery" in raw:
+        elif rule in ("LDTCA", "OUTFOR") or any(x in raw for x in
+                ("in zustellung", "zustellbasis", "in delivery", "out for delivery")):
             code = "out-for-delivery"
-        elif rule in ("INTRAN", "PCKD") or "transit" in raw or "unterwegs" in raw:
+        elif rule in ("INTRAN", "PCKD", "TRANSIT") or any(x in raw for x in
+                ("transit", "unterwegs", "region des empfaengers", "region des empfängers",
+                 "region", "angekommen", "bearbeitet")):
             code = "transit"
         elif "nicht" in raw and "gefunden" in raw:
             code = "not-found"
         else:
             code = "transit"
 
-        first = events[0] if events else {}
+        # ── Status-Objekt ─────────────────────────────────────────────────────
+        ts_clean = status_ts.replace(" ", "T") if status_ts else first.get("timestamp", "")
         status_obj: dict[str, Any] = {
             "status":      code,
-            "description": piece_status_desc or first.get("description", ""),
-            "timestamp":   first.get("timestamp", ""),
+            "description": status_desc or first.get("description", ""),
+            "timestamp":   ts_clean,
         }
-        if first.get("location"):
-            status_obj["location"] = {
-                "address": {"addressLocality": first["location"]}
-            }
+        first_loc = first.get("location", "")
+        if first_loc:
+            status_obj["location"] = {"address": {"addressLocality": first_loc}}
+        if dest_country:
+            status_obj["countryCode"] = dest_country
 
-        _LOGGER.debug(
-            "Parcel DE: %d Ereignisse für %s, Status: %s",
-            len(events), tracking_number, code,
-        )
-        return {"status": status_obj, "events": events}
+        result: dict[str, Any] = {"status": status_obj, "events": events}
 
-    # ── Shipment Tracking – Unified (JSON) ────────────────────────────────────
+        # Estimated Delivery fuer sensor.py
+        if etd_raw:
+            result["estimatedTimeOfDelivery"] = etd_raw.replace(" ", "T")
+
+        return result
+
+    # ── Shipment Tracking – Unified (JSON) ───────────────────────────────────
 
     async def _fetch_unified(
         self, session: aiohttp.ClientSession, tracking_number: str
@@ -290,15 +299,12 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
             ) as resp:
                 if resp.status == 401:
-                    raise UpdateFailed("Ungültiger DHL-API-Schlüssel.")
+                    raise UpdateFailed("Ungueltiger DHL-API-Schluessel.")
                 if resp.status == 429:
                     return {"_error": "rate_limit"}
                 if resp.status == 404:
-                    return {
-                        "status": {"status": "not-found",
-                                   "description": "Sendung nicht gefunden"},
-                        "events": [],
-                    }
+                    return {"status": {"status": "not-found",
+                                       "description": "Sendung nicht gefunden"}, "events": []}
                 if resp.status != 200:
                     return {"_error": f"http_{resp.status}"}
                 result = await resp.json()
@@ -307,8 +313,6 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         shipments = result.get("shipments", [])
         if not shipments:
-            return {
-                "status": {"status": "not-found", "description": "Keine Sendungsdaten"},
-                "events": [],
-            }
+            return {"status": {"status": "not-found",
+                               "description": "Keine Sendungsdaten"}, "events": []}
         return shipments[0]
