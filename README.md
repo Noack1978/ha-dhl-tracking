@@ -20,17 +20,16 @@ Offizielle DHL API-Integration fuer Home Assistant. Verfolge Pakete direkt in HA
 
 ## Voraussetzungen
 
-### DHL Developer Account (optional, fuer Sandbox/Unified API)
+Fuer den **Produktivbetrieb mit Parcel DE Tracking** wird kein
+DHL Developer Account benoetigt.
 
-Fuer den **Produktivbetrieb mit Parcel DE Tracking** wird nur ein kostenloser
-DHL Developer Account benoetigt:
-
+### DHL Developer Account für andere API (optional, fuer Sandbox/Unified API)
 1. Registrieren auf [developer.dhl.com](https://developer.dhl.com)
 2. Neue App erstellen
-3. API "Parcel DE Tracking (Post & Parcel Germany)" hinzufuegen
+3. Unified API oder andere zum testen hinzufügen.
 4. Consumer Key kopieren
 
-Im Produktivbetrieb wird die DHL-Website-API verwendet - keine GKP-Credentials
+## Im Produktivbetrieb wird die DHL-Website-API verwendet - keine GKP-Credentials
 oder spezielle Freischaltung noetig.
 
 ## Installation via HACS
