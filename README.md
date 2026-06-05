@@ -23,14 +23,16 @@ Offizielle DHL API-Integration fuer Home Assistant. Verfolge Pakete direkt in HA
 Fuer den **Produktivbetrieb mit Parcel DE Tracking** wird kein
 DHL Developer Account benoetigt.
 
-### DHL Developer Account für andere API (optional, fuer Sandbox/Unified API)
+### DHL Developer Account fuer andere API (optional, fuer Sandbox/Unified API)
+
 1. Registrieren auf [developer.dhl.com](https://developer.dhl.com)
 2. Neue App erstellen
-3. Unified API oder andere zum testen hinzufügen.
+3. Unified API oder andere zum Testen hinzufuegen
 4. Consumer Key kopieren
 
-## Im Produktivbetrieb wird die DHL-Website-API verwendet 
-- keine GKP-Credentials, Developer-Account oder spezielle Freischaltung noetig.
+## Im Produktivbetrieb wird die DHL-Website-API verwendet
+
+Keine GKP-Credentials, kein Developer-Account oder spezielle Freischaltung noetig.
 
 ## Installation via HACS
 
@@ -44,9 +46,22 @@ DHL Developer Account benoetigt.
 
 1. Einstellungen -> Geraete & Dienste -> Integration hinzufuegen
 2. "DHL Sendungsverfolgung" suchen
-3. Consumer Key eintragen
+3. API-Key optional eintragen (nur fuer Sandbox / Unified API benoetigt)
 4. API-Typ: Parcel DE Tracking (empfohlen)
 5. Sandbox deaktiviert lassen (fuer echten Betrieb)
+
+## Sendungsarchiv
+
+Zugestellte Sendungen koennen archiviert werden:
+
+- In der Lovelace-Karte auf das Archiv-Symbol bei einer zugestellten Sendung tippen
+- Die Sendung wandert ins Archiv und verschwindet aus der aktiven Liste
+- Nach der konfigurierten Aufbewahrungsdauer wird sie zur Loeschung vorgeschlagen
+
+**Einstellungen** (Konfigurieren -> Einstellungen):
+- Aufbewahrungsdauer in Tagen (Standard: 30)
+- Taeglich erinnern wenn Loeschung ausstehend (an/aus)
+- Benachrichtigungsdienst z. B. `notify.mobile_app_mein_handy`
 
 ## Sandbox-Modus (nur fuer Tests)
 
@@ -60,6 +75,8 @@ Fuer Tests mit offiziellen DHL-Testnummern:
 Automatische Erkennung von Sendungsnummern aus DHL-E-Mails.
 Einrichten unter: Konfigurieren -> E-Mail-Scanner
 
+Mehrere Ordner moeglich: kommagetrennt eingeben, z. B. `INBOX, dhl`
+
 Unterstuetzte Anbieter: Gmail, GMX, web.de, T-Online, Outlook, Yahoo, IONOS, freenet
 
 Hinweis: Bei 2-Faktor-Authentifizierung ein App-Passwort verwenden.
@@ -70,7 +87,7 @@ Pro Sendung wird ein Sensor erstellt mit:
 - Status (In Transit, In Zustellung, Zugestellt usw.)
 - Aktueller Ort
 - Geschaetztes Lieferdatum
-- Ereignisverlauf (letzte 10 Ereignisse)
+- Ereignisverlauf (neueste Ereignisse zuerst)
 - Sendungsnummer und Bezeichnung
 
 ## Automations-Beispiel
