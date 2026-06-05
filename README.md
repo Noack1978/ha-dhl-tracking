@@ -29,8 +29,8 @@ DHL Developer Account benoetigt.
 3. Unified API oder andere zum testen hinzufügen.
 4. Consumer Key kopieren
 
-## Im Produktivbetrieb wird die DHL-Website-API verwendet - keine GKP-Credentials
-oder spezielle Freischaltung noetig.
+## Im Produktivbetrieb wird die DHL-Website-API verwendet 
+- keine GKP-Credentials, Developer-Account oder spezielle Freischaltung noetig.
 
 ## Installation via HACS
 
