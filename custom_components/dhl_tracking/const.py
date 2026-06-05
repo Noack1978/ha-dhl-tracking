@@ -130,3 +130,10 @@ DPD_WEBSITE_API_URL = "https://tracking.dpd.de/rest/plc/de_DE"
 
 # DPD URL-Muster in E-Mails von Haendlern
 DPD_URL_PATTERN = r"tracking\.dpd\.de/[^\s]*?/parcel/([A-Z0-9]{8,20})"
+
+# Archiv
+CONF_ARCHIVE_DAYS     = "archive_days"
+CONF_REMINDER_ENABLED = "reminder_enabled"
+CONF_NOTIFY_TARGET    = "notify_target"
+DEFAULT_ARCHIVE_DAYS  = 30
+ARCHIVE_KEY           = f"{DOMAIN}_archive"

@@ -20,6 +20,7 @@ from .const import (
     STATUS_ICONS,
 )
 from .coordinator import DhlTrackingCoordinator
+from .archive_store import DhlArchiveStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +30,8 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Richtet einen Sensor pro gespeicherter Sendungsnummer ein."""
+    """Richtet Sensoren fuer Sendungen und Archiv ein."""
+    from .const import ARCHIVE_KEY
     coordinator: DhlTrackingCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     labels: dict[str, str] = config_entry.options.get(CONF_LABELS, {})
 
@@ -37,6 +39,9 @@ async def async_setup_entry(
         DhlShipmentSensor(coordinator, number, labels.get(number, ""), config_entry)
         for number in coordinator.tracking_numbers
     ]
+    archive = hass.data.get(ARCHIVE_KEY, {}).get(config_entry.entry_id)
+    if archive:
+        entities.append(DhlArchiveSensor(config_entry, archive))
     async_add_entities(entities)
 
 
@@ -208,3 +213,41 @@ class DhlShipmentSensor(CoordinatorEntity[DhlTrackingCoordinator], SensorEntity)
             "parse_error":         "XML-Fehler",
         }
         return mapping.get(error_code, f"Fehler ({error_code})")
+
+
+class DhlArchiveSensor(SensorEntity):
+    """Sensor fuer das DHL-Sendungsarchiv – stellt Daten fuer die Lovelace-Karte bereit."""
+
+    def __init__(self, config_entry, archive: DhlArchiveStore) -> None:
+        self._entry   = config_entry
+        self._archive = archive
+        self._attr_name      = "DHL Archiv"
+        self._attr_unique_id = f"dhl_{config_entry.entry_id}_archive"
+        self._attr_icon      = "mdi:archive"
+
+    @property
+    def state(self) -> int:
+        return len(self._archive.get_all())
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        from .const import CONF_ARCHIVE_DAYS, CONF_REMINDER_ENABLED, DEFAULT_ARCHIVE_DAYS
+        days     = self._entry.options.get(CONF_ARCHIVE_DAYS, DEFAULT_ARCHIVE_DAYS)
+        archived = self._archive.get_all()
+        pending  = self._archive.get_pending(days)
+        return {
+            "archived_items":   archived,
+            "pending_deletion": list(pending.keys()),
+            "pending_count":    len(pending),
+            "archive_days":     days,
+            "reminder_enabled": self._entry.options.get(CONF_REMINDER_ENABLED, True),
+        }
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, self._entry.entry_id)},
+            "name": "DHL Sendungsverfolgung",
+            "manufacturer": "DHL Group",
+            "model": "Parcel DE Tracking API",
+        }

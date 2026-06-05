@@ -22,15 +22,32 @@ from .const import (
     DOMAIN,
     PLATFORMS,
 )
+from datetime import timedelta
+from homeassistant.helpers.event import async_track_time_interval
+from .archive_store import DhlArchiveStore
 from .coordinator import DhlTrackingCoordinator
 from .imap_scanner import DhlImapScanner
+from .const import (
+    ARCHIVE_KEY,
+    CONF_ARCHIVE_DAYS,
+    CONF_NOTIFY_TARGET,
+    CONF_REMINDER_ENABLED,
+    DEFAULT_ARCHIVE_DAYS,
+)
 
 _LOGGER = logging.getLogger(__name__)
-IMAP_SCANNER_KEY = f"{DOMAIN}_imap_scanner"
+IMAP_SCANNER_KEY   = f"{DOMAIN}_imap_scanner"
+REMINDER_UNSUB_KEY = f"{DOMAIN}_reminder_unsub"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
+
+    # Archiv laden
+    archive = DhlArchiveStore(hass)
+    await archive.async_load()
+    hass.data.setdefault(ARCHIVE_KEY, {})[entry.entry_id] = archive
+
     coordinator = DhlTrackingCoordinator(
         hass=hass,
         api_key=entry.data.get(CONF_API_KEY, ""),
@@ -48,6 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_options))
     _async_register_services(hass)
     await _async_start_imap_scanner(hass, entry)
+    _async_start_reminder(hass, entry)
     return True
 
 
@@ -65,13 +83,58 @@ async def _async_stop_imap_scanner(hass: HomeAssistant, entry_id: str) -> None:
         await scanner.async_stop()
 
 
+def _async_start_reminder(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    if not entry.options.get(CONF_REMINDER_ENABLED, True):
+        return
+
+    async def _check(_now=None):
+        archive = hass.data.get(ARCHIVE_KEY, {}).get(entry.entry_id)
+        if not archive:
+            return
+        days    = entry.options.get(CONF_ARCHIVE_DAYS, DEFAULT_ARCHIVE_DAYS)
+        target  = entry.options.get(CONF_NOTIFY_TARGET, "")
+        pending = archive.get_pending(days)
+        if not pending or archive.reminded_today() or not target:
+            return
+        count  = len(pending)
+        labels = ", ".join(p.get("label", k) for k, p in list(pending.items())[:3])
+        if count > 3:
+            labels += f" und {count - 3} weitere"
+        svc_domain, svc_name = (target.split(".", 1) if "." in target else (target, target))
+        await hass.services.async_call(
+            svc_domain, svc_name,
+            {
+                "title": f"DHL Archiv: {count} Sendung(en) loeschbereit",
+                "message": (
+                    f"{labels} {'ist' if count == 1 else 'sind'} "
+                    f"seit mehr als {days} Tagen im Archiv. "
+                    "Bitte in der DHL-Karte bestaetigen."
+                ),
+            },
+            blocking=False,
+        )
+        await archive.async_set_reminded()
+
+    unsub = async_track_time_interval(hass, _check, timedelta(hours=1))
+    hass.data.setdefault(REMINDER_UNSUB_KEY, {})[entry.entry_id] = unsub
+
+
+def _async_stop_reminder(hass: HomeAssistant, entry_id: str) -> None:
+    unsub = hass.data.get(REMINDER_UNSUB_KEY, {}).pop(entry_id, None)
+    if unsub:
+        unsub()
+
+
 async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await _async_stop_imap_scanner(hass, entry.entry_id)
+    _async_stop_reminder(hass, entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _async_stop_imap_scanner(hass, entry.entry_id)
+    _async_stop_reminder(hass, entry.entry_id)
+    hass.data.get(ARCHIVE_KEY, {}).pop(entry.entry_id, None)
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -141,6 +204,49 @@ def _async_register_services(hass: HomeAssistant) -> None:
         if coord:
             await coord.async_refresh()
 
+    def _get_archive(entry_id=None):
+        entry = _get_entry(entry_id)
+        return hass.data.get(ARCHIVE_KEY, {}).get(entry.entry_id) if entry else None
+
+    async def handle_archive_tracking(call: ServiceCall) -> None:
+        entry   = _get_entry(call.data.get("entry_id"))
+        archive = _get_archive(call.data.get("entry_id"))
+        if not entry or not archive:
+            return
+        number = call.data["tracking_number"].strip().replace(" ", "").upper()
+        coord  = hass.data[DOMAIN].get(entry.entry_id)
+        label  = entry.options.get(CONF_LABELS, {}).get(number, number)
+        status, events = "", []
+        if coord and coord.data:
+            d      = coord.data.get(number, {})
+            status = d.get("status", {}).get("description", "")
+            events = d.get("events", [])
+        await archive.async_archive(number, label, status, events)
+        entity_reg = er.async_get(hass)
+        eid = entity_reg.async_get_entity_id("sensor", DOMAIN, f"dhl_{entry.entry_id}_{number}")
+        if eid:
+            entity_reg.async_remove(eid)
+        hass.config_entries.async_update_entry(entry, options={
+            **entry.options,
+            CONF_TRACKING_NUMBERS: [n for n in entry.options.get(CONF_TRACKING_NUMBERS, []) if n != number],
+            CONF_LABELS:      {k: v for k, v in entry.options.get(CONF_LABELS, {}).items() if k != number},
+            CONF_POSTAL_CODES:{k: v for k, v in entry.options.get(CONF_POSTAL_CODES, {}).items() if k != number},
+        })
+        await hass.config_entries.async_reload(entry.entry_id)
+
+    async def handle_purge_archive(call: ServiceCall) -> None:
+        entry   = _get_entry(call.data.get("entry_id"))
+        archive = _get_archive(call.data.get("entry_id"))
+        if not archive:
+            return
+        numbers = call.data.get("tracking_numbers", [])
+        if not numbers:
+            days    = entry.options.get(CONF_ARCHIVE_DAYS, DEFAULT_ARCHIVE_DAYS) if entry else DEFAULT_ARCHIVE_DAYS
+            numbers = list(archive.get_pending(days).keys())
+        await archive.async_purge(numbers)
+        if entry:
+            await hass.config_entries.async_reload(entry.entry_id)
+
     hass.services.async_register(DOMAIN, "add_tracking", handle_add_tracking,
         schema=vol.Schema({
             vol.Required("tracking_number"): cv.string,
@@ -151,6 +257,16 @@ def _async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, "remove_tracking", handle_remove_tracking,
         schema=vol.Schema({
             vol.Required("tracking_number"): cv.string,
+            vol.Optional("entry_id"): cv.string,
+        }))
+    hass.services.async_register(DOMAIN, "archive_tracking", handle_archive_tracking,
+        schema=vol.Schema({
+            vol.Required("tracking_number"): cv.string,
+            vol.Optional("entry_id"): cv.string,
+        }))
+    hass.services.async_register(DOMAIN, "purge_archive", handle_purge_archive,
+        schema=vol.Schema({
+            vol.Optional("tracking_numbers", default=[]): [cv.string],
             vol.Optional("entry_id"): cv.string,
         }))
     hass.services.async_register(DOMAIN, "refresh", handle_refresh,

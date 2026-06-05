@@ -1,7 +1,9 @@
 {
   "domain": "dhl_tracking",
   "name": "DHL Sendungsverfolgung",
-  "codeowners": ["@Noack1978"],
+  "codeowners": [
+    "@Noack1978"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Noack1978/ha-dhl-tracking",
@@ -9,7 +11,9 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Noack1978/ha-dhl-tracking/issues",
-  "loggers": ["custom_components.dhl_tracking"],
+  "loggers": [
+    "custom_components.dhl_tracking"
+  ],
   "requirements": [],
-  "version": "1.2.2"
+  "version": "1.3.0"
 }

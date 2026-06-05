@@ -87,9 +87,17 @@
       },
       "settings": {
         "title": "Einstellungen",
-        "description": "Aktualisierungsintervall in Sekunden. Minimum: 600 s (10 Min).",
+        "description": "Aktualisierungsintervall und Archiv-Einstellungen.",
         "data": {
-          "update_interval": "Aktualisierungsintervall (Sekunden)"
+          "update_interval": "Aktualisierungsintervall (Sekunden)",
+          "archive_days": "Archiv: Aufbewahrungsdauer (Tage)",
+          "reminder_enabled": "Archiv: Taeglich erinnern wenn Loeschung ausstehend",
+          "notify_target": "Archiv: Benachrichtigungsdienst (z. B. notify.mobile_app_xy)"
+        },
+        "data_description": {
+          "archive_days": "Nach wie vielen Tagen sollen archivierte Sendungen zur Loeschung vorgeschlagen werden",
+          "reminder_enabled": "Einmal taeglich benachrichtigen wenn Sendungen auf Loeschbestaetigung warten",
+          "notify_target": "z. B. notify.mobile_app_mein_handy – leer lassen fuer keine Benachrichtigung"
         }
       }
     },
