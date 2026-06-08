@@ -195,12 +195,10 @@ class DhlImapScanner:
             self._auth_failures = 0
             for item in found:
                 number  = item["number"]
-                carrier = item["carrier"]
-                _LOGGER.info("IMAP: %s-Sendung erkannt: %s", carrier.upper(), number)
+                _LOGGER.info("IMAP: Sendung erkannt: %s", number)
                 await self._hass.services.async_call(
                     DOMAIN, "add_tracking",
-                    {"tracking_number": number, "label": "E-Mail Import",
-                     "carrier": carrier},
+                    {"tracking_number": number, "label": "E-Mail Import"},
                     blocking=False,
                 )
         except RuntimeError as err:
