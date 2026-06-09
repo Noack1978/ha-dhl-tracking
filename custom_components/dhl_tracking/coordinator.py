@@ -125,6 +125,16 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         etd = (details.get("voraussichtlicheZustellzeit") or
                details.get("zustelltermin", {}).get("value", ""))
 
+        # Absendername extrahieren (wie in der DHL-App angezeigt)
+        absender = details.get("absender", {})
+        sender_name = (
+            absender.get("name1") or
+            absender.get("name") or
+            absender.get("companyName") or
+            s.get("absender", {}).get("name1") or
+            ""
+        )
+
         events: list[dict[str, Any]] = []
         for evt in events_raw:
             entry: dict[str, Any] = {
@@ -157,6 +167,8 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         result: dict[str, Any] = {"status": status_obj, "events": events}
         if etd:
             result["estimatedTimeOfDelivery"] = str(etd)
+        if sender_name:
+            result["_sender"] = sender_name.strip()
         return result
 
     # ── Sandbox (DASS-XML-API) ────────────────────────────────────────────────

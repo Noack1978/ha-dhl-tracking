@@ -36,8 +36,6 @@ Keine GKP-Credentials, kein Developer-Account oder spezielle Freischaltung noeti
 
 ## Installation via HACS
 
-[![In HACS öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Noack1978&repository=ha-dhl-tracking&category=integration)
-
 1. HACS -> Integrationen -> Menue -> Benutzerdefinierte Repositories
 2. URL: `https://github.com/Noack1978/ha-dhl-tracking`
 3. Kategorie: Integration -> Hinzufuegen
@@ -91,6 +89,7 @@ Pro Sendung wird ein Sensor erstellt mit:
 - Geschaetztes Lieferdatum
 - Ereignisverlauf (neueste Ereignisse zuerst)
 - Sendungsnummer und Bezeichnung
+- Absendername (wird automatisch aus der DHL-API gelesen und als Label gesetzt)
 
 ## Automations-Beispiel
 

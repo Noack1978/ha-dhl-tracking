@@ -63,6 +63,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_options))
+    entry.async_on_unload(
+        coordinator.async_add_listener(_async_auto_update_labels(hass, entry, coordinator))
+    )
     _async_register_services(hass)
     await _async_start_imap_scanner(hass, entry)
     _async_start_reminder(hass, entry)
@@ -123,6 +126,26 @@ def _async_stop_reminder(hass: HomeAssistant, entry_id: str) -> None:
     unsub = hass.data.get(REMINDER_UNSUB_KEY, {}).pop(entry_id, None)
     if unsub:
         unsub()
+
+
+def _async_auto_update_labels(hass, entry, coordinator):
+    """Gibt einen Callback zurueck der Labels automatisch auf Absendernamen setzt."""
+    def _callback():
+        if not coordinator.data:
+            return
+        labels   = dict(entry.options.get(CONF_LABELS, {}))
+        updated  = False
+        for number, data in coordinator.data.items():
+            sender = data.get("_sender", "")
+            if sender and labels.get(number, "") in ("E-Mail Import", "", number):
+                labels[number] = sender
+                updated = True
+                _LOGGER.info("Label fuer %s auf '%s' aktualisiert.", number, sender)
+        if updated:
+            hass.config_entries.async_update_entry(
+                entry, options={**entry.options, CONF_LABELS: labels}
+            )
+    return _callback
 
 
 async def _async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:

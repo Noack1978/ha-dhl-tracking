@@ -117,6 +117,10 @@ class DhlShipmentSensor(CoordinatorEntity[DhlTrackingCoordinator], SensorEntity)
             attrs["error"] = data.get("_error", "no_data") if data else "no_data"
             return attrs
 
+        # Absendername aus API-Antwort
+        if data.get("_sender"):
+            attrs["sender"] = data["_sender"]
+
         # Status
         status = data.get("status", {})
         attrs["status_code"] = status.get("status", "")
