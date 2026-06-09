@@ -129,6 +129,9 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Debug: gesamte Struktur loggen um richtige Felder zu finden
         _LOGGER.debug("DHL API sendungsdetails keys: %s", list(details.keys()))
         _LOGGER.debug("DHL API sendung keys: %s", list(s.keys()))
+        _LOGGER.debug("DHL API sendungsinfo: %s", s.get("sendungsinfo"))
+        _LOGGER.debug("DHL API zustellung: %s", details.get("zustellung"))
+        _LOGGER.debug("DHL API quelle: %s", details.get("quelle"))
 
         absender = (
             details.get("absender") or
