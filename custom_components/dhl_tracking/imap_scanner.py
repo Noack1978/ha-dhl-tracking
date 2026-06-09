@@ -79,6 +79,13 @@ def _get_body(msg: email.message.Message) -> str:
     return "\n".join(parts)
 
 
+_SENDER_PATTERNS = [
+    re.compile(r'(?:sendung|paket|bestellung) +(?:von|bei) +([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch|fr|es))', re.IGNORECASE),
+    re.compile(r'(?:bestellung +bei|versand +(?:von|durch)|shipped +by) +([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch))', re.IGNORECASE),
+    re.compile(r'([\w\-.]+\.(?:com|de|net|org|eu|shop|io)) +(?:hat|has|verschickt|versendet)', re.IGNORECASE),
+]
+
+
 def _extract_sender_from_subject(subject: str) -> str:
     """Versucht den Absendernamen aus dem E-Mail-Betreff zu extrahieren."""
     for pattern in _SENDER_PATTERNS:
