@@ -213,9 +213,8 @@ class DhlImapScanner:
             found = await self._hass.async_add_executor_job(self._scan_sync)
             self._auth_failures = 0
             for item in found:
-                number  = item["number"]
-                sender = _extract_sender_from_subject(subject)
-                label  = sender if sender else "E-Mail Import"
+                number = item["number"]
+                label  = item.get("label", "E-Mail Import")
                 _LOGGER.info("IMAP: Sendung erkannt: %s (Label: %s)", number, label)
                 await self._hass.services.async_call(
                     DOMAIN, "add_tracking",
@@ -270,21 +269,22 @@ class DhlImapScanner:
                             body      = _get_body(msg)
                             full_text = f"{subject}\n{body}"
 
-                            # 1. DPD + DHL via URL (alle E-Mails)
-                            url_results = _extract_all(full_text)
-                            if url_results:
-                                _LOGGER.debug("IMAP [%s]: URL-Treffer von %s: %s",
-                                              folder, from_addr, url_results)
-                                found.extend(url_results)
-                                continue
+                            sender = _extract_sender_from_subject(subject)
 
-                            # 2. DHL per Regex – nur bei verifizierten DHL-Absendern
+                            # 1. piececode= aus DHL-URL (alle E-Mails)
+                            for num in _extract_dhl_from_url(full_text):
+                                if num not in seen:
+                                    seen.add(num)
+                                    found.append({"number": num, "label": sender or "E-Mail Import"})
+                                    _LOGGER.debug("IMAP [%s]: URL-Treffer: %s (Label: %s)", folder, num, sender or "E-Mail Import")
+
+                            # 2. Regex – nur bei verifizierten DHL-Absendern
                             if _is_dhl_sender(from_addr):
-                                regex_results = _extract_dhl_regex(full_text)
-                                if regex_results:
-                                    _LOGGER.debug("IMAP [%s]: DHL-Regex-Treffer: %s",
-                                                  folder, regex_results)
-                                    found.extend(regex_results)
+                                for num in _extract_dhl_regex(full_text):
+                                    if num not in seen:
+                                        seen.add(num)
+                                        found.append({"number": num, "label": sender or "E-Mail Import"})
+                                        _LOGGER.debug("IMAP [%s]: Regex-Treffer: %s (Label: %s)", folder, num, sender or "E-Mail Import")
 
                         except Exception as msg_err:  # noqa: BLE001
                             _LOGGER.warning("IMAP [%s]: Fehler bei E-Mail: %s",
@@ -301,10 +301,15 @@ class DhlImapScanner:
             ) from imap_err
 
         # Duplikate entfernen
-        seen: set[str] = set()
+        seen_nums: set[str] = set()
         unique = []
         for item in found:
-            if item["number"] not in seen:
-                seen.add(item["number"])
+            if isinstance(item, dict):
+                num = item["number"]
+            else:
+                num = item
+                item = {"number": num, "label": "E-Mail Import"}
+            if num not in seen_nums:
+                seen_nums.add(num)
                 unique.append(item)
         return unique
