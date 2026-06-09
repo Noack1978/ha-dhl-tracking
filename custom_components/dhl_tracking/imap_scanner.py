@@ -80,8 +80,13 @@ def _get_body(msg: email.message.Message) -> str:
 
 
 _SENDER_PATTERNS = [
+    # "Ihre shop-apotheke.com Sendung..." – DHL-Format
+    re.compile(r'([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch|fr|es)) +(?:Sendung|Paket|Bestellung)', re.IGNORECASE),
+    # "Sendung von shop.de", "Bestellung bei shop.de"
     re.compile(r'(?:sendung|paket|bestellung) +(?:von|bei) +([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch|fr|es))', re.IGNORECASE),
+    # "Versand durch/von shop.de", "shipped by shop.de"
     re.compile(r'(?:bestellung +bei|versand +(?:von|durch)|shipped +by) +([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch))', re.IGNORECASE),
+    # "shop.de hat Ihre Sendung versendet"
     re.compile(r'([\w\-.]+\.(?:com|de|net|org|eu|shop|io)) +(?:hat|has|verschickt|versendet)', re.IGNORECASE),
 ]
 
@@ -269,6 +274,7 @@ class DhlImapScanner:
                             full_text = f"{subject}\n{body}"
 
                             sender = _extract_sender_from_subject(subject)
+                            _LOGGER.debug("IMAP Betreff: %s | Erkannter Sender: %s", subject, sender)
 
                             # 1. DPD + DHL via URL (alle E-Mails)
                             url_results = _extract_all(full_text)
