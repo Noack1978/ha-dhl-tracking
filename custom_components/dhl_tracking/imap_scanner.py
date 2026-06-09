@@ -39,6 +39,14 @@ _LOGGER = logging.getLogger(__name__)
 # DHL: piececode= in URL (zuverlaessigste Methode)
 _DHL_PIECECODE_RE = re.compile(r"piececode=([A-Z0-9]{5,30})", re.IGNORECASE)
 
+# Absendernamen aus DHL-E-Mail-Betreff extrahieren
+# Muster: "Ihre Sendung von ABSENDER", "Sendung von ABSENDER ist", "bei ABSENDER"
+_SENDER_PATTERNS = [
+    re.compile(r'(?:sendung|paket|bestellung)\s+(?:von|bei)\s+([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch|fr|es|co))', re.IGNORECASE),
+    re.compile(r'(?:bestellung\s+bei|versand\s+(?:von|durch)|shipped\s+by)\s+([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch))', re.IGNORECASE),
+    re.compile(r'([\w\-.]+\.(?:com|de|net|org|eu|shop|io))\s+(?:hat|has|verschickt|versendet)', re.IGNORECASE),
+]
+
 # DHL: Sendungsnummer per Regex (Fallback wenn kein URL-Link)
 _DHL_NUMBER_RE = re.compile(
     r"\b(?:" + "|".join(DHL_TRACKING_PATTERNS) + r")\b", re.IGNORECASE
@@ -77,6 +85,17 @@ def _get_body(msg: email.message.Message) -> str:
             charset = msg.get_content_charset() or "utf-8"
             parts.append(payload.decode(charset, errors="replace"))
     return "\n".join(parts)
+
+
+def _extract_sender_from_subject(subject: str) -> str:
+    """Versucht den Absendernamen aus dem E-Mail-Betreff zu extrahieren."""
+    for pattern in _SENDER_PATTERNS:
+        m = pattern.search(subject)
+        if m:
+            name = m.group(1).strip().rstrip(".,")
+            if len(name) > 3:
+                return name
+    return ""
 
 
 def _is_dhl_sender(from_addr: str) -> bool:
@@ -195,10 +214,12 @@ class DhlImapScanner:
             self._auth_failures = 0
             for item in found:
                 number  = item["number"]
-                _LOGGER.info("IMAP: Sendung erkannt: %s", number)
+                sender = _extract_sender_from_subject(subject)
+                label  = sender if sender else "E-Mail Import"
+                _LOGGER.info("IMAP: Sendung erkannt: %s (Label: %s)", number, label)
                 await self._hass.services.async_call(
                     DOMAIN, "add_tracking",
-                    {"tracking_number": number, "label": "E-Mail Import"},
+                    {"tracking_number": number, "label": label},
                     blocking=False,
                 )
         except RuntimeError as err:

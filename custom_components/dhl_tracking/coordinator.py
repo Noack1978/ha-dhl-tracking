@@ -125,42 +125,7 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         etd = (details.get("voraussichtlicheZustellzeit") or
                details.get("zustelltermin", {}).get("value", ""))
 
-        # Absendername extrahieren - alle bekannten Felder probieren
-        # Debug: gesamte Struktur loggen um richtige Felder zu finden
-        _LOGGER.debug("DHL API sendungsdetails keys: %s", list(details.keys()))
-        _LOGGER.debug("DHL API sendung keys: %s", list(s.keys()))
-        _LOGGER.debug("DHL API sendungsinfo: %s", s.get("sendungsinfo"))
-        _LOGGER.debug("DHL API zustellung: %s", details.get("zustellung"))
-        _LOGGER.debug("DHL API quelle: %s", details.get("quelle"))
-
-        absender = (
-            details.get("absender") or
-            details.get("versender") or
-            s.get("absender") or
-            s.get("versender") or
-            {}
-        )
-        if isinstance(absender, dict):
-            sender_name = (
-                absender.get("name1") or
-                absender.get("name") or
-                absender.get("companyName") or
-                absender.get("firmenname") or
-                ""
-            )
-        else:
-            sender_name = str(absender) if absender else ""
-
-        # Fallback: Absender aus erstem Event-Text extrahieren
-        if not sender_name:
-            sender_name = (
-                details.get("absenderName") or
-                details.get("shopName") or
-                s.get("shopName") or
-                s.get("absenderName") or
-                ""
-            )
-        _LOGGER.debug("DHL sender_name gefunden: '%s'", sender_name)
+        sender_name = ""
 
         events: list[dict[str, Any]] = []
         for evt in events_raw:
@@ -194,8 +159,6 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         result: dict[str, Any] = {"status": status_obj, "events": events}
         if etd:
             result["estimatedTimeOfDelivery"] = str(etd)
-        if sender_name:
-            result["_sender"] = sender_name.strip()
         return result
 
     # ── Sandbox (DASS-XML-API) ────────────────────────────────────────────────
