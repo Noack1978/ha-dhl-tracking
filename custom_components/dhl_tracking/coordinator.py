@@ -125,15 +125,39 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         etd = (details.get("voraussichtlicheZustellzeit") or
                details.get("zustelltermin", {}).get("value", ""))
 
-        # Absendername extrahieren (wie in der DHL-App angezeigt)
-        absender = details.get("absender", {})
-        sender_name = (
-            absender.get("name1") or
-            absender.get("name") or
-            absender.get("companyName") or
-            s.get("absender", {}).get("name1") or
-            ""
+        # Absendername extrahieren - alle bekannten Felder probieren
+        # Debug: gesamte Struktur loggen um richtige Felder zu finden
+        _LOGGER.debug("DHL API sendungsdetails keys: %s", list(details.keys()))
+        _LOGGER.debug("DHL API sendung keys: %s", list(s.keys()))
+
+        absender = (
+            details.get("absender") or
+            details.get("versender") or
+            s.get("absender") or
+            s.get("versender") or
+            {}
         )
+        if isinstance(absender, dict):
+            sender_name = (
+                absender.get("name1") or
+                absender.get("name") or
+                absender.get("companyName") or
+                absender.get("firmenname") or
+                ""
+            )
+        else:
+            sender_name = str(absender) if absender else ""
+
+        # Fallback: Absender aus erstem Event-Text extrahieren
+        if not sender_name:
+            sender_name = (
+                details.get("absenderName") or
+                details.get("shopName") or
+                s.get("shopName") or
+                s.get("absenderName") or
+                ""
+            )
+        _LOGGER.debug("DHL sender_name gefunden: '%s'", sender_name)
 
         events: list[dict[str, Any]] = []
         for evt in events_raw:
