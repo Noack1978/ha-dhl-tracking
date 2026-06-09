@@ -260,6 +260,24 @@ def _async_register_services(hass: HomeAssistant) -> None:
             vol.Required("tracking_number"): cv.string,
             vol.Optional("entry_id"): cv.string,
         }))
+    async def handle_rename_tracking(call: ServiceCall) -> None:
+        entry = _get_entry(call.data.get("entry_id"))
+        if not entry:
+            return
+        number   = call.data["tracking_number"].strip().replace(" ", "").upper()
+        new_label = call.data["label"].strip()
+        labels   = dict(entry.options.get(CONF_LABELS, {}))
+        labels[number] = new_label
+        hass.config_entries.async_update_entry(
+            entry, options={**entry.options, CONF_LABELS: labels}
+        )
+
+    hass.services.async_register(DOMAIN, "rename_tracking", handle_rename_tracking,
+        schema=vol.Schema({
+            vol.Required("tracking_number"): cv.string,
+            vol.Required("label"): cv.string,
+            vol.Optional("entry_id"): cv.string,
+        }))
     hass.services.async_register(DOMAIN, "archive_tracking", handle_archive_tracking,
         schema=vol.Schema({
             vol.Required("tracking_number"): cv.string,

@@ -79,12 +79,20 @@ def _get_body(msg: email.message.Message) -> str:
     return "\n".join(parts)
 
 
+# Woerter die KEIN Shop-Name sind (DHL-eigene Begriffe)
+_SENDER_EXCLUDE = {
+    "dhl", "paket", "sendung", "ihre", "express", "post",
+    "deutsche", "brief", "nachricht", "neue", "update",
+}
+
 _SENDER_PATTERNS = [
-    # "Ihre shop-apotheke.com Sendung..." – DHL-Format
+    # "Ihre shop-apotheke.com Sendung..." – mit TLD
     re.compile(r'([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch|fr|es)) +(?:Sendung|Paket|Bestellung)', re.IGNORECASE),
+    # "Ihre asambeauty Sendung..." – ohne TLD (Wort vor Sendung/Paket)
+    re.compile(r'Ihre +([\w\-]{4,}) +(?:Sendung|Paket|Bestellung)', re.IGNORECASE),
     # "Sendung von shop.de", "Bestellung bei shop.de"
     re.compile(r'(?:sendung|paket|bestellung) +(?:von|bei) +([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch|fr|es))', re.IGNORECASE),
-    # "Versand durch/von shop.de", "shipped by shop.de"
+    # "Versand durch/von shop.de"
     re.compile(r'(?:bestellung +bei|versand +(?:von|durch)|shipped +by) +([\w\-.]+\.(?:com|de|net|org|eu|shop|io|at|ch))', re.IGNORECASE),
     # "shop.de hat Ihre Sendung versendet"
     re.compile(r'([\w\-.]+\.(?:com|de|net|org|eu|shop|io)) +(?:hat|has|verschickt|versendet)', re.IGNORECASE),
@@ -97,7 +105,7 @@ def _extract_sender_from_subject(subject: str) -> str:
         m = pattern.search(subject)
         if m:
             name = m.group(1).strip().rstrip(".,")
-            if len(name) > 3:
+            if len(name) > 3 and name.lower() not in _SENDER_EXCLUDE:
                 return name
     return ""
 
