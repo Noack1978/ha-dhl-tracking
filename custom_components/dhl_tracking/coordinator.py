@@ -11,6 +11,7 @@ from typing import Any
 import aiohttp
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -63,22 +64,22 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not self.tracking_numbers:
             return {}
         data: dict[str, Any] = {}
-        async with aiohttp.ClientSession() as session:
-            for number in self.tracking_numbers:
-                try:
-                    if self.api_type != API_TYPE_PARCEL_DE:
-                        data[number] = await self._fetch_unified(session, number)
-                    elif self.sandbox:
-                        data[number] = await self._fetch_sandbox(
-                            session, number, self.postal_codes.get(number, "")
-                        )
-                    else:
-                        data[number] = await self._fetch_dhl_website(session, number)
-                except UpdateFailed:
-                    raise
-                except Exception as err:  # noqa: BLE001
-                    _LOGGER.warning("Fehler bei %s: %s", number, err)
-                    data[number] = {"_error": str(err)}
+        session = async_get_clientsession(self.hass)
+        for number in self.tracking_numbers:
+            try:
+                if self.api_type != API_TYPE_PARCEL_DE:
+                    data[number] = await self._fetch_unified(session, number)
+                elif self.sandbox:
+                    data[number] = await self._fetch_sandbox(
+                        session, number, self.postal_codes.get(number, "")
+                    )
+                else:
+                    data[number] = await self._fetch_dhl_website(session, number)
+            except UpdateFailed:
+                raise
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("Fehler bei %s: %s", number, err)
+                data[number] = {"_error": str(err)}
         return data
 
     # ── DHL Website-API (Produktion) ──────────────────────────────────────────
