@@ -288,9 +288,16 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @staticmethod
     def _status_code(text: str) -> str:
-        # Nur eindeutige Zustellungs-Meldungen als "delivered" werten
-        # "Neue Zustellanschrift: Packstation" ist KEINE Zustellung
-        if any(x in text for x in (
+        # Zukunfts-Formulierungen: Zustellung steht noch aus
+        # z. B. "wird an die Hausadresse zugestellt" oder "Paketumleitung storniert"
+        is_future_delivery = any(x in text for x in (
+            "wird zugestellt",
+            "wird an die",
+            "paketumleitung",
+            "wird noch",
+        ))
+
+        if not is_future_delivery and any(x in text for x in (
             "zugestellt",
             "delivered",
             "abgeliefert",
@@ -317,6 +324,7 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "transit", "unterwegs", "region", "angekommen",
             "weitergeleitet", "sortiert", "depot", "hub",
             "zustellbasis", "bearbeitet", "packstation",
+            "briefzentrum", "briefnetz",
         )):
             return "transit"
         return "transit"
