@@ -4,17 +4,19 @@
 [![HA Version](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue.svg)](https://www.home-assistant.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Offizielle DHL API-Integration fuer Home Assistant. Verfolge Pakete direkt in HA.
+Offizielle DHL-Integration fuer Home Assistant. Verfolge Pakete direkt in HA.
 
 ## Features
 
 - Sendungsverfolgung ueber DHL-Website-API (kein spezieller API-Zugang noetig)
 - Unterstuetzt alle DHL-Sendungsnummernformate (00-Prefix, JJD, Express)
 - Mehrere Sendungen gleichzeitig verfolgen
-- Individuelle Bezeichnungen pro Sendung
+- Individuelle Bezeichnungen pro Sendung (manuell oder automatisch aus E-Mail-Betreff)
 - Automatische Aktualisierung (konfigurierbares Intervall)
-- E-Mail-Scanner: erkennt Sendungsnummern automatisch aus DHL-Mails
-- Services zum Hinzufuegen/Entfernen von Sendungen (auch per Automation)
+- E-Mail-Scanner: erkennt Sendungsnummern automatisch aus DHL-Mails (mehrere Ordner)
+- Sendungsarchiv fuer zugestellte Pakete mit Erinnerungsfunktion
+- Event `dhl_tracking_status_changed` bei Statuswechsel → einfache Automationen
+- Services zum Hinzufuegen/Entfernen/Umbenennen/Archivieren von Sendungen
 - UI auf Deutsch und Englisch
 - Passende Lovelace-Karte: https://github.com/Noack1978/ha-dhl-tracking-card
 
@@ -49,6 +51,33 @@ Keine GKP-Credentials, kein Developer-Account oder spezielle Freischaltung noeti
 3. API-Key optional eintragen (nur fuer Sandbox / Unified API benoetigt)
 4. API-Typ: Parcel DE Tracking (empfohlen)
 5. Sandbox deaktiviert lassen (fuer echten Betrieb)
+
+## Automationen mit dhl_tracking_status_changed
+
+Die Integration feuert automatisch ein Event wenn eine Sendung den Status wechselt.
+Damit keine Polling-Automationen noetig:
+
+```yaml
+alias: DHL Sendungsbenachrichtigung
+triggers:
+  - trigger: event
+    event_type: dhl_tracking_status_changed
+conditions: []
+actions:
+  - action: notify.mobile_app_mein_handy
+    data:
+      title: DHL
+      message: >
+        {% if trigger.event.data.status == 'out-for-delivery' %}
+          {{ trigger.event.data.label }} trifft heute ein.
+        {% else %}
+          {{ trigger.event.data.label }} wurde zugestellt.
+        {% endif %}
+mode: parallel
+max: 10
+```
+
+Event-Daten: `tracking_number`, `label`, `status` (`out-for-delivery` / `delivered`), `description`
 
 ## Sendungsarchiv
 
@@ -89,22 +118,7 @@ Pro Sendung wird ein Sensor erstellt mit:
 - Geschaetztes Lieferdatum
 - Ereignisverlauf (neueste Ereignisse zuerst)
 - Sendungsnummer und Bezeichnung
-- Absendername (wird automatisch aus der DHL-API gelesen und als Label gesetzt)
-
-## Automations-Beispiel
-
-```yaml
-alias: "Paket zugestellt"
-trigger:
-  - platform: state
-    entity_id: sensor.dhl_sendungsverfolgung_mein_paket
-    to: "Zugestellt"
-action:
-  - service: notify.mobile_app_mein_handy
-    data:
-      title: "Paket angekommen!"
-      message: "{{ state_attr(trigger.entity_id, 'label') }} wurde zugestellt."
-```
+- Absendername (wird automatisch aus dem E-Mail-Betreff gelesen)
 
 ## Lizenz
 
