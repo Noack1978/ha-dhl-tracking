@@ -58,6 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         scan_interval=entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_SCAN_INTERVAL),
         sandbox=entry.data.get(CONF_SANDBOX, False),
     )
+    coordinator.labels = dict(entry.options.get(CONF_LABELS, {}))
     if entry.options.get(CONF_TRACKING_NUMBERS):
         await coordinator.async_config_entry_first_refresh()
     hass.data[DOMAIN][entry.entry_id] = coordinator

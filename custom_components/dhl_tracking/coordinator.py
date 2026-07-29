@@ -49,6 +49,7 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.sandbox    = sandbox
         self.tracking_numbers = tracking_numbers
         self.postal_codes     = postal_codes
+        self.labels:  dict[str, str] = {}
 
         if api_type != API_TYPE_PARCEL_DE:
             self._unified_url = UNIFIED_API_SANDBOX_URL if sandbox else UNIFIED_API_URL
@@ -80,7 +81,30 @@ class DhlTrackingCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except Exception as err:  # noqa: BLE001
                 _LOGGER.warning("Fehler bei %s: %s", number, err)
                 data[number] = {"_error": str(err)}
+        self._fire_status_events(data)
         return data
+
+    def _fire_status_events(self, new_data: dict[str, Any]) -> None:
+        notify_states = {"out-for-delivery", "delivered"}
+        old_data = self.data or {}
+        for number, new_entry in new_data.items():
+            if "_error" in new_entry:
+                continue
+            new_status = new_entry.get("status", {}).get("status", "")
+            old_status = old_data.get(number, {}).get("status", {}).get("status", "")
+            if new_status not in notify_states or new_status == old_status:
+                continue
+            label = self.labels.get(number, number)
+            _LOGGER.info("DHL Status-Event: %s -> %s (%s)", number, new_status, label)
+            self.hass.bus.async_fire(
+                "dhl_tracking_status_changed",
+                {
+                    "tracking_number": number,
+                    "label":           label,
+                    "status":          new_status,
+                    "description":     new_entry.get("status", {}).get("description", ""),
+                },
+            )
 
     # ── DHL Website-API (Produktion) ──────────────────────────────────────────
 
